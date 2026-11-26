@@ -213,8 +213,22 @@ En cada conexión, de forma autónoma:
   requieren BD).
 
 ### Empresa (acciones; solo SOCIO)
-- [ ] **T28 · Bookmarks:** `Company_student_rel` — guardar/quitar/listar perfiles de
+- [x] **T28 · Bookmarks:** `Company_student_rel` — guardar/quitar/listar perfiles de
   interés de la empresa; solo alumnos visibles; aislamiento por empresa. Tests.
+  **Hecho:** `src/model/bookmark.ts` con `proyectarBookmarks` (pura: cards públicas
+  con privacidad por campo, reutiliza `proyectarAlumnoPublico`),
+  `obtenerEmpresaDeUsuario` (resuelve la empresa del SOCIO vía `Company_user_rel`),
+  `guardarBookmark` (solo si el alumno es consultable = activo + consentido; si no
+  → `sin-alumno`; idempotente vía `on conflict do nothing`; audita INSERT),
+  `quitarBookmark` (idempotente, audita DELETE, aislamiento en el `where`) y
+  `listarBookmarks` (join `Company_student_rel`×`Student` con enforcement en SQL:
+  solo activos + consentidos, aislado por `company_id`, orden por `created_at`).
+  Endpoints `GET/PUT/DELETE /api/escaparate/bookmarks[/:id]` tras
+  `requiereAuth`+`requiereRol('SOCIO')`+`requiereEmailVerificado`; empresa no
+  asociada → 409, alumno no consultable/inexistente al guardar → 404. Tests en
+  `tests/model/bookmark.test.ts` (puros: proyección + privacidad) y
+  `tests/controller/bookmark.test.ts` (permisos + idempotencia + privacidad +
+  no-consultable + aislamiento entre empresas, requieren BD).
 - [ ] **T29 · Alumnos en empresas socias:** gestión de `Student.current_company_id`
   (asignar/quitar, por admin) y sección "alumnos que trabajan en empresas socias".
   Tests.

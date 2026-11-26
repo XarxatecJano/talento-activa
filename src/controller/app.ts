@@ -27,6 +27,12 @@ import {
 } from '../model/escaparate.js';
 import type { FiltrosAlumno } from '../model/escaparate.js';
 import {
+  obtenerEmpresaDeUsuario,
+  guardarBookmark,
+  quitarBookmark,
+  listarBookmarks,
+} from '../model/bookmark.js';
+import {
   crearProyecto,
   listarProyectosPorUserId,
   actualizarProyecto,
@@ -579,6 +585,52 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
       const alumno = await obtenerAlumnoPublicoConContacto(sql, c.req.param('id'));
       if (!alumno) return c.json({ error: 'No encontrado' }, 404);
       return c.json(alumno);
+    },
+  );
+
+  // --- Bookmarks de empresa (T28; solo SOCIO verificado) ----------------------
+  // Perfiles de interés de la empresa sobre `Company_student_rel`. Solo alumnos
+  // visibles (activos + consentidos); aislamiento por empresa (se resuelve la
+  // empresa del SOCIO vía `Company_user_rel`).
+
+  app.get(
+    '/api/escaparate/bookmarks',
+    requiereAuth(sql),
+    requiereRol('SOCIO'),
+    requiereEmailVerificado(sql),
+    async (c) => {
+      const companyId = await obtenerEmpresaDeUsuario(sql, c.get('actor').id);
+      if (!companyId) return c.json({ error: 'Empresa no asociada' }, 409);
+      return c.json(await listarBookmarks(sql, companyId));
+    },
+  );
+
+  app.put(
+    '/api/escaparate/bookmarks/:id',
+    requiereAuth(sql),
+    requiereRol('SOCIO'),
+    requiereEmailVerificado(sql),
+    async (c) => {
+      const actor = c.get('actor');
+      const companyId = await obtenerEmpresaDeUsuario(sql, actor.id);
+      if (!companyId) return c.json({ error: 'Empresa no asociada' }, 409);
+      const r = await guardarBookmark(sql, companyId, c.req.param('id'), actor.id);
+      if (r === 'sin-alumno') return c.json({ error: 'No encontrado' }, 404);
+      return c.body(null, 204);
+    },
+  );
+
+  app.delete(
+    '/api/escaparate/bookmarks/:id',
+    requiereAuth(sql),
+    requiereRol('SOCIO'),
+    requiereEmailVerificado(sql),
+    async (c) => {
+      const actor = c.get('actor');
+      const companyId = await obtenerEmpresaDeUsuario(sql, actor.id);
+      if (!companyId) return c.json({ error: 'Empresa no asociada' }, 409);
+      await quitarBookmark(sql, companyId, c.req.param('id'), actor.id);
+      return c.body(null, 204);
     },
   );
 

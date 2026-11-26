@@ -120,6 +120,14 @@
     "tests/controller/ficha-contacto.test.ts": {
       "sha256": "4eae5d497d740ceeb5c461297c27d87ecdc11306e2d23e8e94da7d298bba44fc",
       "lockedAt": "2026-11-26T17:08:01.993Z"
+    },
+    "tests/model/bookmark.test.ts": {
+      "sha256": "26c89c6e1abdf47911af0ddd2397958b59648d8ee75397abafc0c687e40297c3",
+      "lockedAt": "2026-11-26T18:09:47.977Z"
+    },
+    "tests/controller/bookmark.test.ts": {
+      "sha256": "f495522ec1c82d0adbdcc5fa834735e5443e0d8a4d641e0142862eff3dcb2786",
+      "lockedAt": "2026-11-26T18:09:47.977Z"
     }
   }
 }
