@@ -1,18 +1,4 @@
--- =============================================================================
--- seed.sql — App Alumnos Xarxatec Activa
--- Creación de la base de datos en PostgreSQL (Supabase).
---
--- Convención de nombres (ver docs/modelo-entidad-relacion.md):
---   - Tablas: singular, primera letra en mayúscula, snake_case.
---     En PostgreSQL esto obliga a ENTRECOMILLAR los identificadores ("User"),
---     porque sin comillas se pasarían a minúscula y, además, User y Language
---     son palabras reservadas.
---   - Columnas: minúscula y snake_case (no necesitan comillas).
---   - Tablas puente N:M: las dos tablas ordenadas alfabéticamente + "_rel".
---
--- Script idempotente: puede ejecutarse varias veces sin error.
--- Ejecutar en el SQL Editor de Supabase o con `supabase db` / psql.
--- =============================================================================
+
 
 begin;
 
