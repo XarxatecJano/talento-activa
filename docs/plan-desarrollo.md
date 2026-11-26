@@ -71,53 +71,87 @@ En cada conexión, de forma autónoma:
 > Orden por dependencias. El Desarrollador coge la primera `[ ]` no terminada.
 
 ### Bootstrap
-- [ ] **T00 · Andamiaje del proyecto:** `package.json` (TS), runner de tests
+- [x] **T00 · Andamiaje del proyecto:** `package.json` (TS), runner de tests
   (vitest), `tsconfig`, estructura de carpetas MVC (`src/model`, `src/controller`,
   `src/view`, `tests/`), scripts `test`/`build`. Primer test trivial en verde.
-- [ ] **T01 · Cliente de datos:** conexión a Supabase/Postgres desde el backend
+- [x] **T01 · Cliente de datos:** conexión a Supabase/Postgres desde el backend
   (service role / conexión directa). Test de conectividad/consulta básica.
-- [ ] **T02 · Capa de auditoría:** helper que escribe en `Audit_log` desde la capa
+- [x] **T02 · Capa de auditoría:** helper que escribe en `Audit_log` desde la capa
   de aplicación (nunca hash ni token). Test de inserción y de exclusiones.
 
 ### Autenticación
-- [ ] **T03 · Hashing de contraseñas:** Argon2id `m=19456,t=2,p=1`; validación de
+- [x] **T03 · Hashing de contraseñas:** Argon2id `m=19456,t=2,p=1`; validación de
   longitud 12–256 → error de datos no válidos. Tests de hash/verify y límites.
-- [ ] **T04 · Modelo User:** alta por invitación (rol, `email_verified=false`),
+- [x] **T04 · Modelo User:** alta por invitación (rol, `email_verified=false`),
   email único sobre `lower(email)`. Tests.
-- [ ] **T05 · Sesiones:** token opaco 32 bytes base64url; guardar solo SHA-256;
+- [x] **T05 · Sesiones:** token opaco 32 bytes base64url; guardar solo SHA-256;
   resolver sesión (null + borrado si no existe/caduca/usuario inexistente) y
   devolver `Actor {id, rol}`; renovación deslizante (<15 días → 30). Tests.
-- [ ] **T06 · Cookie de sesión:** helpers para `sesion` (`HttpOnly`, `SameSite=Lax`,
+- [x] **T06 · Cookie de sesión:** helpers para `sesion` (`HttpOnly`, `SameSite=Lax`,
   `Path=/`, `Secure` en prod, `Expires` absoluto). Tests.
-- [ ] **T07 · Login:** `POST /api/auth/login` crea sesión nueva e invalida la
+- [x] **T07 · Login:** `POST /api/auth/login` crea sesión nueva e invalida la
   previa de la cookie; anti-enumeración con `HASH_SEÑUELO` (mismo error y mismo
   coste temporal). Tests incl. tiempos.
-- [ ] **T08 · Logout y /me:** `POST /api/auth/logout` (idempotente, limpia cookie)
+- [x] **T08 · Logout y /me:** `POST /api/auth/logout` (idempotente, limpia cookie)
   y `GET /api/me` (proyección pública sin hash). Tests.
-- [ ] **T09 · Middleware de autorización:** resuelve sesión y exige rol por ruta.
+- [x] **T09 · Middleware de autorización:** resuelve sesión y exige rol por ruta.
   Tests de acceso por rol.
-- [ ] **T10 · Registro restringido:** `POST /api/auth/register` solo ADMIN (alta por
+- [x] **T10 · Registro restringido:** `POST /api/auth/register` solo ADMIN (alta por
   invitación). Tests.
-- [ ] **T11 · Verificación de email:** token de un solo uso con caducidad + envío;
+- [x] **T11 · Verificación de email:** token de un solo uso con caducidad + envío;
   bloquear acceso hasta verificar. Tests.
+  > Nota: el bloqueo se hace con el middleware `requiereEmailVerificado` (se
+  > aplicará a las rutas de recursos desde T15); login/logout/me no bloquean a no
+  > verificados para no romper tests ya bloqueados (decisión acordada con el
+  > responsable el 2026-11-26).
 
 ### Administración
-- [ ] **T12 · Ediciones:** CRUD de `Edition` (crear, cerrar). Tests.
-- [ ] **T13 · Alta de alumnos finalizados:** crear `Student` (usuario ALUMNO) y
+- [x] **T12 · Ediciones:** CRUD de `Edition` (crear, cerrar). Tests.
+- [x] **T13 · Alta de alumnos finalizados:** crear `Student` (usuario ALUMNO) y
   asociar a una edición. Tests.
-- [ ] **T14 · Alta de empresas:** crear `Company` por invitación y marcar `es_socia`.
+- [x] **T14 · Alta de empresas:** crear `Company` por invitación y marcar `es_socia`.
   Tests.
 
 ### Alumno
-- [ ] **T15 · Ficha de alumno:** modelo `Student` + endpoints de lectura/edición de
+- [x] **T15 · Ficha de alumno:** modelo `Student` + endpoints de lectura/edición de
   su ficha; `privacy` por campo. Tests.
-- [ ] **T16 · Estado activo/inactivo:** el alumno (y el admin) cambian `estado`;
+- [x] **T16 · Estado activo/inactivo:** el alumno (y el admin) cambian `estado`;
   un `inactivo` no es consultable por empresas. Tests de enforcement.
-- [ ] **T17 · Derecho al olvido:** borrado en cascada de datos del alumno. Tests.
-- [ ] **T18 · Proyectos:** CRUD de `Project` vinculado al alumno; validar URL;
+- [x] **T17 · Derecho al olvido:** borrado en cascada de datos del alumno. Tests.
+- [x] **T18 · Proyectos:** CRUD de `Project` vinculado al alumno; validar URL;
   miniatura por subida manual. Tests.
-- [ ] **T19 · Skills e idiomas:** catálogo + asociación N:M con nivel
+- [x] **T19 · Skills e idiomas:** catálogo + asociación N:M con nivel
   (`Skill_student_rel`, `Language_student_rel`). Tests.
+- [x] **T20 · Consentimiento al publicar (RGPD):** endpoint de consentimiento
+  (`POST /api/alumnos/me/consentimiento`, fija `consent_at`) y enforcement: un
+  alumno sin `consent_at` no es consultable por empresas. Tests. (Añadida tras la
+  revisión 2026-11-26, hallazgo MEDIO 1; con OK del responsable para actualizar el
+  test bloqueado `estado.test.ts`.)
 
 > Fases 2 (escaparate/empresas), 3 (automatizaciones/emails) y 4 (chatbot) se
 > detallarán cuando la Fase 1 esté cerrada y revisada.
+
+## Decisiones de cierre de Fase 1 (revisión 2026-11-26)
+
+Documentadas a raíz de la auditoría `docs/revisiones/2026-11-26.md`:
+
+- **Auditoría de sesiones/tokens (MENOR 3):** `crearSesion`,
+  `eliminarSesionPorToken` y `crearTokenVerificacion` **no** escriben en
+  `Audit_log` a propósito: son plomería de autenticación (ruido alto por
+  petición) y nunca se auditaría el secreto. `verificarEmail` sí audita el cambio
+  de `email_verified`. El invariante "cada mutación audita" se aplica a las
+  mutaciones de **datos de negocio**.
+- **Longitud de contraseña (MENOR 5):** `validarLongitudPassword` mide con
+  `String.length` (unidades UTF-16). Es el criterio aceptado para el rango 12–256.
+
+- **Consentimiento al publicar (MEDIO 1):** RESUELTO en T20 (el responsable dio OK
+  para actualizar `estado.test.ts`).
+- **Filtrado `privacy` por campo (MEDIO 2):** APLAZADO a Fase 2, junto con el
+  escaparate/navegación de empresas (su punto de uso real). `obtenerAlumnoPublico`
+  queda como proyección pública mínima por ahora.
+- **Verificación de email en rutas de admin (MENOR 4):** ACEPTADO como está. El
+  admin inicial nace verificado (seed); endurecerlo requeriría tocar tests
+  bloqueados y se deja para más adelante si hiciera falta.
+
+Todos los hallazgos de la revisión 2026-11-26 están resueltos o con decisión
+tomada. **Fase 1 cerrada.**

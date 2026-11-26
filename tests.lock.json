@@ -1,4 +1,89 @@
 {
   "version": 1,
-  "locked": {}
+  "locked": {
+    "tests/model/db.test.ts": {
+      "sha256": "cc7dce491d4917acb4cc09e95323116805109f599b65d027ddca66527058b4a0",
+      "lockedAt": "2026-11-26T09:34:48.323Z"
+    },
+    "tests/model/audit.test.ts": {
+      "sha256": "f1ec2fb956732b40e4e1cfcc065043aec59369f847e59579191f54de567307da",
+      "lockedAt": "2026-11-26T09:44:30.246Z"
+    },
+    "tests/model/password.test.ts": {
+      "sha256": "b4525fbbb6f0753d41cee440b4042142ec01c848554406fa4263c2f4d366d801",
+      "lockedAt": "2026-11-26T09:50:02.233Z"
+    },
+    "tests/model/user.test.ts": {
+      "sha256": "f0de785126dbf2f884a4b775f34d1e96d16cd3862988a3676dc0964d93865592",
+      "lockedAt": "2026-11-26T09:57:37.847Z"
+    },
+    "tests/model/session.test.ts": {
+      "sha256": "1de1bee3f63946dc7e59293adbb2cb5ca3e074e46a4a9d5b1c5c2ab90202c651",
+      "lockedAt": "2026-11-26T10:00:46.881Z"
+    },
+    "tests/controller/cookie.test.ts": {
+      "sha256": "ca980955b16d99238e38c3b7ea03c762f15e03e9598116809862c0bcaefdc6dd",
+      "lockedAt": "2026-11-26T10:02:09.320Z"
+    },
+    "tests/controller/login.test.ts": {
+      "sha256": "05291f207bd24aa9e3477de0feaf9312f954008e0148340b357d75164af874b1",
+      "lockedAt": "2026-11-26T10:05:28.215Z"
+    },
+    "tests/controller/logout-me.test.ts": {
+      "sha256": "08f9c711bcdcfbcc3db3c2a9d01ec76b33a0cd1bca412b7e23c1ddd825e18601",
+      "lockedAt": "2026-11-26T10:07:06.780Z"
+    },
+    "tests/controller/middleware.test.ts": {
+      "sha256": "e1000b521f816400d22dbedc74acf80a36901cadc61547724ee87cab88430aec",
+      "lockedAt": "2026-11-26T10:09:03.100Z"
+    },
+    "tests/controller/register.test.ts": {
+      "sha256": "00b8c4dbc32ca9cc7f1175128c0419b42010a5c1a93d13555be76fcb41b5ce7e",
+      "lockedAt": "2026-11-26T10:11:01.001Z"
+    },
+    "tests/controller/verify.test.ts": {
+      "sha256": "13907d9d1f9f1e201e44ec9dcf08ba28e51e788042182bb36b353ca7550f74bd",
+      "lockedAt": "2026-11-26T10:17:59.613Z"
+    },
+    "tests/controller/edition.test.ts": {
+      "sha256": "496ad7dbd8d6a185aa5f0b2e56e82ca1b0b8dbc71c20e37dc157b30f25ef6936",
+      "lockedAt": "2026-11-26T10:21:33.492Z"
+    },
+    "tests/controller/student.test.ts": {
+      "sha256": "e45dbdd5e84b744173a1d46aaca0ef07f0753f599458a266770c337693a8c475",
+      "lockedAt": "2026-11-26T10:27:40.383Z"
+    },
+    "tests/controller/company.test.ts": {
+      "sha256": "b8c310e76806cf6b641e132c64983acf5f94382ae5c2f94913392f9ba49df3d3",
+      "lockedAt": "2026-11-26T10:50:36.574Z"
+    },
+    "tests/controller/ficha.test.ts": {
+      "sha256": "19e59e543855ed393ca1d2902e366545af42c9d4090d93dc58284aa5a8aa1ca2",
+      "lockedAt": "2026-11-26T10:57:03.202Z"
+    },
+    "tests/controller/olvido.test.ts": {
+      "sha256": "db02c328e6906d3df333e48c8070c78ddfe971d6777926e3f3c523b2f13a8a01",
+      "lockedAt": "2026-11-26T11:11:20.870Z"
+    },
+    "tests/controller/project.test.ts": {
+      "sha256": "f252caaa1155ac395c152da3fbe67664ce9471441e1942cc02a6ce6ffc38a767",
+      "lockedAt": "2026-11-26T11:14:35.299Z"
+    },
+    "tests/controller/catalog.test.ts": {
+      "sha256": "429496cd960d2ca51c0677984730188f0e09dec693a0f42521cc4674eaf11a82",
+      "lockedAt": "2026-11-26T11:20:35.610Z"
+    },
+    "tests/controller/estado.test.ts": {
+      "sha256": "b7a3645f46354b714852c1cf921cf2e913946a1ee2fe7574ec1965b8ef9bb81b",
+      "lockedAt": "2026-11-26T11:50:01.761Z"
+    },
+    "tests/controller/consentimiento.test.ts": {
+      "sha256": "6143ee376964abcf08a965faf65aeb075ca7419126016d29d4a62697b5768be5",
+      "lockedAt": "2026-11-26T11:50:29.787Z"
+    },
+    "tests/controller/health.test.ts": {
+      "sha256": "3c8d99075d84e8f814d2d6e5f16609b5383fe25f6feeb96c2db549b7c1de4e7d",
+      "lockedAt": "2026-11-26T12:00:24.650Z"
+    }
+  }
 }
