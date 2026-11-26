@@ -1,4 +1,4 @@
-import type { Sql } from 'postgres';
+import type { ISql } from 'postgres';
 
 /**
  * Claves que NUNCA deben acabar en el log de auditoría (hash de contraseña ni
@@ -56,7 +56,7 @@ export interface EntradaAuditoria {
  *
  * @returns El id de la fila de auditoría insertada.
  */
-export async function registrarAuditoria(sql: Sql, entrada: EntradaAuditoria): Promise<string> {
+export async function registrarAuditoria(sql: ISql, entrada: EntradaAuditoria): Promise<string> {
   // El resultado de sanitizarDatos es JSON-serializable por construcción.
   type ValorJson = Parameters<typeof sql.json>[0];
   const anteriores =

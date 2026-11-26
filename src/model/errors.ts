@@ -9,3 +9,14 @@ export class DatosInvalidosError extends Error {
     this.name = 'DatosInvalidosError';
   }
 }
+
+/**
+ * El email ya está registrado. Mensaje genérico a propósito (anti-enumeración):
+ * la capa de controlador lo mapea a un 409 sin revelar si el email existía.
+ */
+export class EmailYaRegistradoError extends Error {
+  constructor(message = 'No se ha podido completar el registro') {
+    super(message);
+    this.name = 'EmailYaRegistradoError';
+  }
+}
