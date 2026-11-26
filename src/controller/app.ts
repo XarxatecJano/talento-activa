@@ -4,6 +4,7 @@ import { autenticar } from './auth.js';
 import { crearSesion, eliminarSesionPorToken } from '../model/session.js';
 import { obtenerUsuarioPublico, crearUsuario, esRol } from '../model/user.js';
 import { crearTokenVerificacion, verificarEmail } from '../model/email_verification.js';
+import { crearEdicion, listarEdiciones, obtenerEdicion, cerrarEdicion } from '../model/edition.js';
 import { DatosInvalidosError, EmailYaRegistradoError } from '../model/errors.js';
 import { construirCookieSesion, construirCookieBorrado, leerTokenCookie } from './cookie.js';
 import { requiereAuth, requiereRol, type AppEnv } from './middleware.js';
@@ -110,6 +111,51 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     const usuario = await obtenerUsuarioPublico(sql, actor.id);
     if (!usuario) return c.json({ error: 'No autenticado' }, 401);
     return c.json(usuario, 200);
+  });
+
+  // --- Ediciones (administración, solo ADMIN) ---------------------------------
+
+  app.post('/api/ediciones', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+    const actor = c.get('actor');
+    const body = (await c.req.json().catch(() => null)) as
+      | { nombre?: unknown; anio?: unknown; fecha_inicio?: unknown; fecha_fin?: unknown }
+      | null;
+    if (!body || typeof body.nombre !== 'string' || typeof body.anio !== 'number') {
+      return c.json({ error: 'Datos no válidos' }, 400);
+    }
+    try {
+      const ed = await crearEdicion(
+        sql,
+        {
+          nombre: body.nombre,
+          anio: body.anio,
+          fecha_inicio: typeof body.fecha_inicio === 'string' ? body.fecha_inicio : null,
+          fecha_fin: typeof body.fecha_fin === 'string' ? body.fecha_fin : null,
+        },
+        actor.id,
+      );
+      return c.json(ed, 201);
+    } catch (err) {
+      if (err instanceof DatosInvalidosError) return c.json({ error: err.message }, 400);
+      throw err;
+    }
+  });
+
+  app.get('/api/ediciones', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+    return c.json(await listarEdiciones(sql));
+  });
+
+  app.get('/api/ediciones/:id', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+    const ed = await obtenerEdicion(sql, c.req.param('id'));
+    if (!ed) return c.json({ error: 'No encontrada' }, 404);
+    return c.json(ed);
+  });
+
+  app.post('/api/ediciones/:id/cerrar', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+    const actor = c.get('actor');
+    const ed = await cerrarEdicion(sql, c.req.param('id'), actor.id);
+    if (!ed) return c.json({ error: 'No encontrada' }, 404);
+    return c.json(ed);
   });
 
   return app;
