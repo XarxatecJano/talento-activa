@@ -128,8 +128,69 @@ En cada conexión, de forma autónoma:
   revisión 2026-11-26, hallazgo MEDIO 1; con OK del responsable para actualizar el
   test bloqueado `estado.test.ts`.)
 
-> Fases 2 (escaparate/empresas), 3 (automatizaciones/emails) y 4 (chatbot) se
-> detallarán cuando la Fase 1 esté cerrada y revisada.
+> Fases 3 (automatizaciones/emails) y 4 (chatbot) se detallarán cuando la Fase 2
+> esté cerrada y revisada.
+
+## Backlog de tareas (Fase 2 — Escaparate y empresas)
+
+> Detallada el 2026-11-26. **Decisiones de producto tomadas con el responsable:**
+> (1) el escaparate es **solo para empresas autenticadas** (SOCIO verificado), no
+> público en internet; (2) el **frontend** (VanillaJS + TS) se desarrolla **en
+> paralelo** al backend; (3) el **contacto** se hace **revelando el email** del
+> alumno a la empresa cuando el alumno ha consentido (y la privacidad lo permite),
+> no por relay.
+>
+> Convenciones nuevas: endpoints de escaparate bajo `/api/escaparate/*`, todos tras
+> `requiereAuth` + `requiereRol('SOCIO')` + `requiereEmailVerificado`. Siguen TDD y
+> tests bloqueados. El frontend se prueba con vitest (jsdom) y/o E2E.
+
+### Habilitadores
+- [ ] **T21 · Supabase Storage:** abstracción `Almacenamiento` (como
+  `EnviadorEmail`) + implementación Supabase; buckets para **foto de alumno, CV y
+  miniatura de proyecto**; subida (URLs firmadas o proxy) y borrado; guardar la URL
+  en la ficha/proyecto. Tests con doble de almacenamiento.
+- [ ] **T22 · Email real (Resend):** implementación real detrás de `EnviadorEmail`
+  (hoy *noop*), configurada por entorno (API key en `.env`/`.env.local`), para que
+  la **verificación** envíe de verdad en producción. En test/dev se usa el doble.
+
+### Escaparate (lectura; solo SOCIO)
+- [ ] **T23 · Privacidad por campo:** define la forma de `Student.privacy`
+  (propuesta: `{ "<campo>": boolean }`, visible por defecto salvo `false`) y aplica
+  el filtrado en la proyección pública. Resuelve el MEDIO 2 aplazado. Test de
+  enforcement (campo privado no aparece).
+- [ ] **T24 · Ediciones → cards de alumnos:** `GET /api/escaparate/ediciones` y
+  `.../ediciones/:id` devuelven los alumnos **activos + consentidos** de la edición,
+  proyección pública con `privacy` aplicada. Oculta inactivos/no-consentidos/
+  privados. Tests.
+- [ ] **T25 · Escaparate de proyectos:** `GET /api/escaparate/proyectos` con
+  miniatura, respetando la visibilidad del alumno dueño. Tests.
+- [ ] **T26 · Búsqueda y filtrado estructurado:** `GET /api/escaparate/alumnos` con
+  filtros combinables (`skill`, `edicion`, `modalidad`, `disponibilidad`,
+  `estado_laboral`), solo sobre visibles. Tests de combinaciones.
+- [ ] **T27 · Ficha completa para empresa + contacto:** `GET /api/escaparate/alumnos/:id`
+  con la ficha pública (privacy aplicada) **incluyendo el email de contacto** cuando
+  el alumno consintió y no lo marcó privado (contacto por revelación). Tests.
+
+### Empresa (acciones; solo SOCIO)
+- [ ] **T28 · Bookmarks:** `Company_student_rel` — guardar/quitar/listar perfiles de
+  interés de la empresa; solo alumnos visibles; aislamiento por empresa. Tests.
+- [ ] **T29 · Alumnos en empresas socias:** gestión de `Student.current_company_id`
+  (asignar/quitar, por admin) y sección "alumnos que trabajan en empresas socias".
+  Tests.
+
+### Frontend (VanillaJS + TypeScript) — en paralelo
+- [ ] **T30 · Andamiaje frontend:** bundler (vite), estructura en `src/view/`,
+  build y servir estáticos (dev server + producción desde Hono). Primer render.
+- [ ] **T31 · UI de autenticación:** login/logout y estado de sesión (`/api/me`).
+- [ ] **T32 · UI de la ficha del alumno:** editar ficha, estado, consentimiento,
+  proyectos, skills/idiomas y subidas (foto/CV/miniatura).
+- [ ] **T33 · UI de empresa (escaparate):** cards por edición, búsqueda/filtro,
+  ficha de alumno, bookmarks y contacto.
+- [ ] **T34 · UI de administración:** ediciones, alta de alumnos y empresas,
+  marcado de socia, estados.
+
+> Orden sugerido: T21/T22 (habilitadores) → T23 → T24/T25/T26/T27 → T28/T29. El
+> frontend (T30→T34) avanza en paralelo según haya endpoints; T30 primero.
 
 ## Decisiones de cierre de Fase 1 (revisión 2026-11-26)
 
