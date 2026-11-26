@@ -125,3 +125,20 @@ En cada conexión, de forma autónoma:
 
 > Fases 2 (escaparate/empresas), 3 (automatizaciones/emails) y 4 (chatbot) se
 > detallarán cuando la Fase 1 esté cerrada y revisada.
+
+## Decisiones de cierre de Fase 1 (revisión 2026-11-26)
+
+Documentadas a raíz de la auditoría `docs/revisiones/2026-11-26.md`:
+
+- **Auditoría de sesiones/tokens (MENOR 3):** `crearSesion`,
+  `eliminarSesionPorToken` y `crearTokenVerificacion` **no** escriben en
+  `Audit_log` a propósito: son plomería de autenticación (ruido alto por
+  petición) y nunca se auditaría el secreto. `verificarEmail` sí audita el cambio
+  de `email_verified`. El invariante "cada mutación audita" se aplica a las
+  mutaciones de **datos de negocio**.
+- **Longitud de contraseña (MENOR 5):** `validarLongitudPassword` mide con
+  `String.length` (unidades UTF-16). Es el criterio aceptado para el rango 12–256.
+
+Pendientes de decisión del responsable (ver informe): consentimiento al publicar
+(MEDIO 1), filtrado `privacy` por campo en la vista de empresa (MEDIO 2), y gate
+de verificación en rutas de admin (MENOR 4).
