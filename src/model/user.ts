@@ -5,6 +5,14 @@ import { DatosInvalidosError, EmailYaRegistradoError } from './errors.js';
 
 export type Rol = 'ADMIN' | 'SOCIO' | 'ALUMNO';
 
+/** Roles válidos del sistema. */
+export const ROLES: readonly Rol[] = ['ADMIN', 'SOCIO', 'ALUMNO'];
+
+/** Type guard: ¿`valor` es un Rol válido? */
+export function esRol(valor: unknown): valor is Rol {
+  return typeof valor === 'string' && (ROLES as readonly string[]).includes(valor);
+}
+
 /** Proyección pública de un usuario: nunca incluye `password_hash`. */
 export interface UsuarioPublico {
   id: string;

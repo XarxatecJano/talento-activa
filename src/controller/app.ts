@@ -2,9 +2,10 @@ import { Hono } from 'hono';
 import type { Sql } from 'postgres';
 import { autenticar } from './auth.js';
 import { crearSesion, eliminarSesionPorToken } from '../model/session.js';
-import { obtenerUsuarioPublico } from '../model/user.js';
+import { obtenerUsuarioPublico, crearUsuario, esRol } from '../model/user.js';
+import { DatosInvalidosError, EmailYaRegistradoError } from '../model/errors.js';
 import { construirCookieSesion, construirCookieBorrado, leerTokenCookie } from './cookie.js';
-import { requiereAuth, type AppEnv } from './middleware.js';
+import { requiereAuth, requiereRol, type AppEnv } from './middleware.js';
 
 /**
  * Construye la app Hono con las rutas de la API. Recibe el cliente `sql` por
@@ -38,6 +39,32 @@ export function crearApp(sql: Sql): Hono<AppEnv> {
     c.header('Set-Cookie', construirCookieSesion(token, expiresAt));
 
     return c.json({ id: identidad.id, rol: identidad.rol }, 200);
+  });
+
+  // POST /api/auth/register — alta por invitación, restringida a ADMIN. No hay
+  // registro público. La cuenta nace con email_verified=false.
+  app.post('/api/auth/register', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+    const actor = c.get('actor');
+    const body = (await c.req.json().catch(() => null)) as
+      | { email?: unknown; password?: unknown; rol?: unknown }
+      | null;
+
+    if (!body || typeof body.email !== 'string' || typeof body.password !== 'string' || !esRol(body.rol)) {
+      return c.json({ error: 'Datos no válidos' }, 400);
+    }
+
+    try {
+      const usuario = await crearUsuario(
+        sql,
+        { email: body.email, password: body.password, rol: body.rol },
+        actor.id,
+      );
+      return c.json(usuario, 201);
+    } catch (err) {
+      if (err instanceof EmailYaRegistradoError) return c.json({ error: err.message }, 409);
+      if (err instanceof DatosInvalidosError) return c.json({ error: err.message }, 400);
+      throw err;
+    }
   });
 
   // POST /api/auth/logout — borra la sesión y limpia la cookie. Idempotente.

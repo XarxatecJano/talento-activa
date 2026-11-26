@@ -36,6 +36,10 @@
     "tests/controller/middleware.test.ts": {
       "sha256": "e1000b521f816400d22dbedc74acf80a36901cadc61547724ee87cab88430aec",
       "lockedAt": "2026-11-26T10:09:03.100Z"
+    },
+    "tests/controller/register.test.ts": {
+      "sha256": "00b8c4dbc32ca9cc7f1175128c0419b42010a5c1a93d13555be76fcb41b5ce7e",
+      "lockedAt": "2026-11-26T10:11:01.001Z"
     }
   }
 }
