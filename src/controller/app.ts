@@ -1,16 +1,17 @@
 import { Hono } from 'hono';
 import type { Sql } from 'postgres';
 import { autenticar } from './auth.js';
-import { crearSesion, eliminarSesionPorToken, resolverSesion } from '../model/session.js';
+import { crearSesion, eliminarSesionPorToken } from '../model/session.js';
 import { obtenerUsuarioPublico } from '../model/user.js';
 import { construirCookieSesion, construirCookieBorrado, leerTokenCookie } from './cookie.js';
+import { requiereAuth, type AppEnv } from './middleware.js';
 
 /**
  * Construye la app Hono con las rutas de la API. Recibe el cliente `sql` por
  * inyección para poder testear con una BD real sin depender de un singleton.
  */
-export function crearApp(sql: Sql): Hono {
-  const app = new Hono();
+export function crearApp(sql: Sql): Hono<AppEnv> {
+  const app = new Hono<AppEnv>();
 
   // POST /api/auth/login — crea una sesión nueva (invalidando la previa de la
   // cookie) si las credenciales son válidas. Anti-enumeración en `autenticar`.
@@ -47,22 +48,12 @@ export function crearApp(sql: Sql): Hono {
     return c.body(null, 204);
   });
 
-  // GET /api/me — usuario actual (proyección pública sin hash). 401 si no hay
-  // sesión válida. Repone la cookie si hubo renovación deslizante.
-  app.get('/api/me', async (c) => {
-    const token = leerTokenCookie(c.req.header('Cookie'));
-    if (!token) return c.json({ error: 'No autenticado' }, 401);
-
-    const resuelta = await resolverSesion(sql, token);
-    if (!resuelta) return c.json({ error: 'No autenticado' }, 401);
-
-    if (resuelta.renovada) {
-      c.header('Set-Cookie', construirCookieSesion(token, resuelta.expiresAt));
-    }
-
-    const usuario = await obtenerUsuarioPublico(sql, resuelta.actor.id);
+  // GET /api/me — usuario actual (proyección pública sin hash). El middleware
+  // resuelve la sesión (401 si no hay) y repone la cookie si hubo renovación.
+  app.get('/api/me', requiereAuth(sql), async (c) => {
+    const actor = c.get('actor');
+    const usuario = await obtenerUsuarioPublico(sql, actor.id);
     if (!usuario) return c.json({ error: 'No autenticado' }, 401);
-
     return c.json(usuario, 200);
   });
 
