@@ -17,6 +17,13 @@ import {
 } from '../model/student.js';
 import type { CambiosFicha, EstadoStudent } from '../model/student.js';
 import { crearEmpresa, listarEmpresas, obtenerEmpresa, marcarSocia } from '../model/company.js';
+import {
+  crearProyecto,
+  listarProyectosPorUserId,
+  actualizarProyecto,
+  borrarProyecto,
+} from '../model/project.js';
+import type { CambiosProyecto } from '../model/project.js';
 import { DatosInvalidosError, EmailYaRegistradoError } from '../model/errors.js';
 import { construirCookieSesion, construirCookieBorrado, leerTokenCookie } from './cookie.js';
 import { requiereAuth, requiereRol, requiereEmailVerificado, type AppEnv } from './middleware.js';
@@ -58,6 +65,28 @@ function parsearCambiosFicha(body: unknown): CambiosFicha | null {
     cambios.privacy = b.privacy as Record<string, unknown>;
   }
 
+  return Object.keys(cambios).length > 0 ? cambios : null;
+}
+
+/** Valida el body de edición de proyecto; `null` si inválido o sin campos. */
+function parsearCambiosProyecto(body: unknown): CambiosProyecto | null {
+  if (typeof body !== 'object' || body === null) return null;
+  const b = body as Record<string, unknown>;
+  const cambios: CambiosProyecto = {};
+  if ('titulo' in b) {
+    if (typeof b.titulo !== 'string') return null;
+    cambios.titulo = b.titulo;
+  }
+  if ('url' in b) {
+    if (typeof b.url !== 'string') return null;
+    cambios.url = b.url;
+  }
+  for (const k of ['descripcion', 'thumbnail_url'] as const) {
+    if (k in b) {
+      if (b[k] !== null && typeof b[k] !== 'string') return null;
+      cambios[k] = b[k] as string | null;
+    }
+  }
   return Object.keys(cambios).length > 0 ? cambios : null;
 }
 import { enviadorNoop, type EnviadorEmail } from './email.js';
@@ -306,6 +335,86 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     if (!student) return c.json({ error: 'No encontrado' }, 404);
     return c.json(student);
   });
+
+  // --- Proyectos del alumno (propios) -----------------------------------------
+
+  app.post(
+    '/api/alumnos/me/proyectos',
+    requiereAuth(sql),
+    requiereRol('ALUMNO'),
+    requiereEmailVerificado(sql),
+    async (c) => {
+      const actor = c.get('actor');
+      const body = (await c.req.json().catch(() => null)) as
+        | { titulo?: unknown; url?: unknown; descripcion?: unknown; thumbnail_url?: unknown }
+        | null;
+      if (!body || typeof body.titulo !== 'string' || typeof body.url !== 'string') {
+        return c.json({ error: 'Datos no válidos' }, 400);
+      }
+      try {
+        const proyecto = await crearProyecto(
+          sql,
+          actor.id,
+          {
+            titulo: body.titulo,
+            url: body.url,
+            descripcion: typeof body.descripcion === 'string' ? body.descripcion : null,
+            thumbnail_url: typeof body.thumbnail_url === 'string' ? body.thumbnail_url : null,
+          },
+          actor.id,
+        );
+        if (!proyecto) return c.json({ error: 'Ficha no encontrada' }, 404);
+        return c.json(proyecto, 201);
+      } catch (err) {
+        if (err instanceof DatosInvalidosError) return c.json({ error: err.message }, 400);
+        throw err;
+      }
+    },
+  );
+
+  app.get(
+    '/api/alumnos/me/proyectos',
+    requiereAuth(sql),
+    requiereRol('ALUMNO'),
+    requiereEmailVerificado(sql),
+    async (c) => {
+      const actor = c.get('actor');
+      return c.json(await listarProyectosPorUserId(sql, actor.id));
+    },
+  );
+
+  app.patch(
+    '/api/alumnos/me/proyectos/:id',
+    requiereAuth(sql),
+    requiereRol('ALUMNO'),
+    requiereEmailVerificado(sql),
+    async (c) => {
+      const actor = c.get('actor');
+      const cambios: CambiosProyecto | null = parsearCambiosProyecto(await c.req.json().catch(() => null));
+      if (!cambios) return c.json({ error: 'Datos no válidos' }, 400);
+      try {
+        const proyecto = await actualizarProyecto(sql, actor.id, c.req.param('id'), cambios, actor.id);
+        if (!proyecto) return c.json({ error: 'No encontrado' }, 404);
+        return c.json(proyecto);
+      } catch (err) {
+        if (err instanceof DatosInvalidosError) return c.json({ error: err.message }, 400);
+        throw err;
+      }
+    },
+  );
+
+  app.delete(
+    '/api/alumnos/me/proyectos/:id',
+    requiereAuth(sql),
+    requiereRol('ALUMNO'),
+    requiereEmailVerificado(sql),
+    async (c) => {
+      const actor = c.get('actor');
+      const borrado = await borrarProyecto(sql, actor.id, c.req.param('id'), actor.id);
+      if (!borrado) return c.json({ error: 'No encontrado' }, 404);
+      return c.body(null, 204);
+    },
+  );
 
   // Derecho al olvido: el alumno borra su cuenta y todos sus datos (cascada).
   app.delete(
