@@ -20,6 +20,10 @@
     "tests/model/session.test.ts": {
       "sha256": "1de1bee3f63946dc7e59293adbb2cb5ca3e074e46a4a9d5b1c5c2ab90202c651",
       "lockedAt": "2026-11-26T10:00:46.881Z"
+    },
+    "tests/controller/cookie.test.ts": {
+      "sha256": "ca980955b16d99238e38c3b7ea03c762f15e03e9598116809862c0bcaefdc6dd",
+      "lockedAt": "2026-11-26T10:02:09.320Z"
     }
   }
 }
