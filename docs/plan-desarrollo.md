@@ -161,10 +161,14 @@ En cada conexión, de forma autónoma:
   `proyectarAlumnoPublico` (pura, reutilizable) y `CAMPOS_PRIVABLES` en
   `student.ts`; `obtenerAlumnoPublico` aplica el filtrado. La identidad
   (`id`/`edition_id`/`nombre`) nunca se oculta. Tests en `tests/model/privacy.test.ts`.
-- [ ] **T24 · Ediciones → cards de alumnos:** `GET /api/escaparate/ediciones` y
+- [x] **T24 · Ediciones → cards de alumnos:** `GET /api/escaparate/ediciones` y
   `.../ediciones/:id` devuelven los alumnos **activos + consentidos** de la edición,
   proyección pública con `privacy` aplicada. Oculta inactivos/no-consentidos/
-  privados. Tests.
+  privados. Tests. **Hecho:** `src/model/escaparate.ts` (`agruparEscaparate` pura +
+  `listarEscaparate`/`obtenerEdicionEscaparate` con enforcement en SQL), endpoints
+  bajo `/api/escaparate/*` tras `requiereAuth`+`requiereRol('SOCIO')`+
+  `requiereEmailVerificado`. Reutiliza `proyectarAlumnoPublico` (T23). Tests en
+  `tests/model/escaparate.test.ts` y `tests/controller/escaparate.test.ts`.
 - [ ] **T25 · Escaparate de proyectos:** `GET /api/escaparate/proyectos` con
   miniatura, respetando la visibilidad del alumno dueño. Tests.
 - [ ] **T26 · Búsqueda y filtrado estructurado:** `GET /api/escaparate/alumnos` con

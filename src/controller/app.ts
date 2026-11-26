@@ -18,6 +18,7 @@ import {
 } from '../model/student.js';
 import type { CambiosFicha, EstadoStudent } from '../model/student.js';
 import { crearEmpresa, listarEmpresas, obtenerEmpresa, marcarSocia } from '../model/company.js';
+import { listarEscaparate, obtenerEdicionEscaparate } from '../model/escaparate.js';
 import {
   crearProyecto,
   listarProyectosPorUserId,
@@ -476,6 +477,31 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
       const alumno = await obtenerAlumnoPublico(sql, c.req.param('id'));
       if (!alumno) return c.json({ error: 'No encontrado' }, 404);
       return c.json(alumno);
+    },
+  );
+
+  // --- Escaparate (lectura; solo SOCIO verificado) ----------------------------
+  // Cards de alumnos consultables (activos + consentidos) agrupadas por edición,
+  // con la privacidad por campo aplicada. No público: tras auth + rol SOCIO +
+  // email verificado.
+
+  app.get(
+    '/api/escaparate/ediciones',
+    requiereAuth(sql),
+    requiereRol('SOCIO'),
+    requiereEmailVerificado(sql),
+    async (c) => c.json(await listarEscaparate(sql)),
+  );
+
+  app.get(
+    '/api/escaparate/ediciones/:id',
+    requiereAuth(sql),
+    requiereRol('SOCIO'),
+    requiereEmailVerificado(sql),
+    async (c) => {
+      const ed = await obtenerEdicionEscaparate(sql, c.req.param('id'));
+      if (!ed) return c.json({ error: 'No encontrada' }, 404);
+      return c.json(ed);
     },
   );
 

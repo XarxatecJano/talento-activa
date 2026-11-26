@@ -88,6 +88,14 @@
     "tests/model/privacy.test.ts": {
       "sha256": "931347b3ec4cdd2d0faebc818e7d6ccc3bed3c1d64836fac0161bcf4339d59e8",
       "lockedAt": "2026-11-26T13:29:50.021Z"
+    },
+    "tests/model/escaparate.test.ts": {
+      "sha256": "6a20ee8730ce8132dabd4632032beccb3e14b2a9f9a906cea9b9f751e64fd9e2",
+      "lockedAt": "2026-11-26T14:06:48.008Z"
+    },
+    "tests/controller/escaparate.test.ts": {
+      "sha256": "fcb3b6fd16ecb393bbd2c780e61242622310f74abec9ea37561107aaa5a83a65",
+      "lockedAt": "2026-11-26T14:06:48.008Z"
     }
   }
 }
