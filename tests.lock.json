@@ -48,6 +48,10 @@
     "tests/controller/edition.test.ts": {
       "sha256": "496ad7dbd8d6a185aa5f0b2e56e82ca1b0b8dbc71c20e37dc157b30f25ef6936",
       "lockedAt": "2026-11-26T10:21:33.492Z"
+    },
+    "tests/controller/student.test.ts": {
+      "sha256": "e45dbdd5e84b744173a1d46aaca0ef07f0753f599458a266770c337693a8c475",
+      "lockedAt": "2026-11-26T10:27:40.383Z"
     }
   }
 }

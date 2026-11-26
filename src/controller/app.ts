@@ -5,6 +5,7 @@ import { crearSesion, eliminarSesionPorToken } from '../model/session.js';
 import { obtenerUsuarioPublico, crearUsuario, esRol } from '../model/user.js';
 import { crearTokenVerificacion, verificarEmail } from '../model/email_verification.js';
 import { crearEdicion, listarEdiciones, obtenerEdicion, cerrarEdicion } from '../model/edition.js';
+import { crearAlumno } from '../model/student.js';
 import { DatosInvalidosError, EmailYaRegistradoError } from '../model/errors.js';
 import { construirCookieSesion, construirCookieBorrado, leerTokenCookie } from './cookie.js';
 import { requiereAuth, requiereRol, type AppEnv } from './middleware.js';
@@ -156,6 +157,43 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     const ed = await cerrarEdicion(sql, c.req.param('id'), actor.id);
     if (!ed) return c.json({ error: 'No encontrada' }, 404);
     return c.json(ed);
+  });
+
+  // --- Alumnos (alta por admin; alumno finalizado) ----------------------------
+
+  app.post('/api/alumnos', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+    const actor = c.get('actor');
+    const body = (await c.req.json().catch(() => null)) as
+      | { email?: unknown; password?: unknown; nombre?: unknown; edition_id?: unknown }
+      | null;
+    if (
+      !body ||
+      typeof body.email !== 'string' ||
+      typeof body.password !== 'string' ||
+      typeof body.nombre !== 'string' ||
+      typeof body.edition_id !== 'string'
+    ) {
+      return c.json({ error: 'Datos no válidos' }, 400);
+    }
+    try {
+      const { usuario, student } = await crearAlumno(
+        sql,
+        { email: body.email, password: body.password, nombre: body.nombre, edition_id: body.edition_id },
+        actor.id,
+      );
+      // Envía la verificación al alumno (best-effort).
+      try {
+        const { token } = await crearTokenVerificacion(sql, usuario.id);
+        await enviador.enviarVerificacion(usuario.email, token);
+      } catch {
+        /* el fallo de envío no invalida el alta */
+      }
+      return c.json({ student, usuario }, 201);
+    } catch (err) {
+      if (err instanceof EmailYaRegistradoError) return c.json({ error: err.message }, 409);
+      if (err instanceof DatosInvalidosError) return c.json({ error: err.message }, 400);
+      throw err;
+    }
   });
 
   return app;

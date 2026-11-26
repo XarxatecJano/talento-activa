@@ -1,4 +1,4 @@
-import type { Sql } from 'postgres';
+import type { Sql, ISql } from 'postgres';
 import { hashPassword } from './password.js';
 import { registrarAuditoria } from './audit.js';
 import { DatosInvalidosError, EmailYaRegistradoError } from './errors.js';
@@ -96,35 +96,45 @@ function esViolacionUnicidad(err: unknown): boolean {
  * @throws {DatosInvalidosError} email inválido o contraseña fuera de rango.
  * @throws {EmailYaRegistradoError} si el email ya existe (case-insensitive).
  */
+/**
+ * Inserta un usuario (hash + auditoría del INSERT) sobre un `sql` que puede ser
+ * un handle de transacción, para componer con otras mutaciones en la misma tx
+ * (p. ej. alta de alumno = User + Student). No captura la violación de unicidad:
+ * lo hace quien abre la transacción.
+ *
+ * @throws {DatosInvalidosError} email inválido o contraseña fuera de rango.
+ */
+export async function insertarUsuario(
+  tx: ISql,
+  datos: DatosNuevoUsuario,
+  idActor: string | null,
+): Promise<UsuarioPublico> {
+  const email = normalizarEmail(datos.email);
+  const passwordHash = await hashPassword(datos.password);
+
+  const filas = await tx<UsuarioPublico[]>`
+    insert into "User" (email, password_hash, rol)
+    values (${email}, ${passwordHash}, ${datos.rol})
+    returning id, email, rol, email_verified, created_at
+  `;
+  const creado = filas[0]!;
+  await registrarAuditoria(tx, {
+    idUsuario: idActor,
+    tabla: 'User',
+    idRegistro: creado.id,
+    operacion: 'INSERT',
+    datosNuevos: { email: creado.email, rol: creado.rol, email_verified: creado.email_verified },
+  });
+  return creado;
+}
+
 export async function crearUsuario(
   sql: Sql,
   datos: DatosNuevoUsuario,
   idActor: string | null = null,
 ): Promise<UsuarioPublico> {
-  const email = normalizarEmail(datos.email);
-  const passwordHash = await hashPassword(datos.password);
-
   try {
-    const usuario = await sql.begin(async (tx) => {
-      const filas = await tx<UsuarioPublico[]>`
-        insert into "User" (email, password_hash, rol)
-        values (${email}, ${passwordHash}, ${datos.rol})
-        returning id, email, rol, email_verified, created_at
-      `;
-      const creado = filas[0]!;
-      await registrarAuditoria(tx, {
-        idUsuario: idActor,
-        tabla: 'User',
-        idRegistro: creado.id,
-        operacion: 'INSERT',
-        datosNuevos: {
-          email: creado.email,
-          rol: creado.rol,
-          email_verified: creado.email_verified,
-        },
-      });
-      return creado;
-    });
+    const usuario = await sql.begin((tx) => insertarUsuario(tx, datos, idActor));
     return usuario as UsuarioPublico;
   } catch (err) {
     if (esViolacionUnicidad(err)) {
