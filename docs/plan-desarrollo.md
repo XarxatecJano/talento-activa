@@ -146,7 +146,12 @@ Documentadas a raíz de la auditoría `docs/revisiones/2026-11-26.md`:
 
 - **Consentimiento al publicar (MEDIO 1):** RESUELTO en T20 (el responsable dio OK
   para actualizar `estado.test.ts`).
+- **Filtrado `privacy` por campo (MEDIO 2):** APLAZADO a Fase 2, junto con el
+  escaparate/navegación de empresas (su punto de uso real). `obtenerAlumnoPublico`
+  queda como proyección pública mínima por ahora.
+- **Verificación de email en rutas de admin (MENOR 4):** ACEPTADO como está. El
+  admin inicial nace verificado (seed); endurecerlo requeriría tocar tests
+  bloqueados y se deja para más adelante si hiciera falta.
 
-Pendientes de decisión del responsable (ver informe): filtrado `privacy` por campo
-en la vista de empresa (MEDIO 2), y gate de verificación en rutas de admin
-(MENOR 4).
+Todos los hallazgos de la revisión 2026-11-26 están resueltos o con decisión
+tomada. **Fase 1 cerrada.**
