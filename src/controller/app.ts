@@ -14,6 +14,7 @@ import {
   obtenerAlumnoPublico,
   borrarAlumnoPorUserId,
   borrarAlumnoPorId,
+  registrarConsentimiento,
 } from '../model/student.js';
 import type { CambiosFicha, EstadoStudent } from '../model/student.js';
 import { crearEmpresa, listarEmpresas, obtenerEmpresa, marcarSocia } from '../model/company.js';
@@ -311,6 +312,20 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
       const cambios = parsearCambiosFicha(await c.req.json().catch(() => null));
       if (!cambios) return c.json({ error: 'Datos no válidos' }, 400);
       const ficha = await actualizarFicha(sql, actor.id, cambios, actor.id);
+      if (!ficha) return c.json({ error: 'Ficha no encontrada' }, 404);
+      return c.json(ficha);
+    },
+  );
+
+  // Consentimiento explícito del alumno para publicar sus datos (RGPD).
+  app.post(
+    '/api/alumnos/me/consentimiento',
+    requiereAuth(sql),
+    requiereRol('ALUMNO'),
+    requiereEmailVerificado(sql),
+    async (c) => {
+      const actor = c.get('actor');
+      const ficha = await registrarConsentimiento(sql, actor.id, actor.id);
       if (!ficha) return c.json({ error: 'Ficha no encontrada' }, 404);
       return c.json(ficha);
     },

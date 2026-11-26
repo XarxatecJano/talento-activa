@@ -99,8 +99,10 @@ describe('controller/estado — enforcement: inactivo no consultable por empresa
       // Nace inactivo → no consultable.
       expect((await get(app, `/api/alumnos/${studentId}`, socio.cookie)).status).toBe(404);
 
-      // El alumno se activa.
+      // El alumno se activa y consiente (RGPD: consent_at requerido para ser
+      // consultable por empresas, T20).
       await patch(app, '/api/alumnos/me/estado', cookieAlumno, { estado: 'activo' });
+      await sql`update "Student" set consent_at = now() where id = ${studentId}`;
 
       const res = await get(app, `/api/alumnos/${studentId}`, socio.cookie);
       expect(res.status).toBe(200);

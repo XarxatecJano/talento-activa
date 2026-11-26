@@ -122,6 +122,11 @@ En cada conexión, de forma autónoma:
   miniatura por subida manual. Tests.
 - [x] **T19 · Skills e idiomas:** catálogo + asociación N:M con nivel
   (`Skill_student_rel`, `Language_student_rel`). Tests.
+- [x] **T20 · Consentimiento al publicar (RGPD):** endpoint de consentimiento
+  (`POST /api/alumnos/me/consentimiento`, fija `consent_at`) y enforcement: un
+  alumno sin `consent_at` no es consultable por empresas. Tests. (Añadida tras la
+  revisión 2026-11-26, hallazgo MEDIO 1; con OK del responsable para actualizar el
+  test bloqueado `estado.test.ts`.)
 
 > Fases 2 (escaparate/empresas), 3 (automatizaciones/emails) y 4 (chatbot) se
 > detallarán cuando la Fase 1 esté cerrada y revisada.
@@ -139,6 +144,9 @@ Documentadas a raíz de la auditoría `docs/revisiones/2026-11-26.md`:
 - **Longitud de contraseña (MENOR 5):** `validarLongitudPassword` mide con
   `String.length` (unidades UTF-16). Es el criterio aceptado para el rango 12–256.
 
-Pendientes de decisión del responsable (ver informe): consentimiento al publicar
-(MEDIO 1), filtrado `privacy` por campo en la vista de empresa (MEDIO 2), y gate
-de verificación en rutas de admin (MENOR 4).
+- **Consentimiento al publicar (MEDIO 1):** RESUELTO en T20 (el responsable dio OK
+  para actualizar `estado.test.ts`).
+
+Pendientes de decisión del responsable (ver informe): filtrado `privacy` por campo
+en la vista de empresa (MEDIO 2), y gate de verificación en rutas de admin
+(MENOR 4).

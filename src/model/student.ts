@@ -149,6 +149,45 @@ export async function actualizarFicha(
   return (resultado as FichaStudent | null) ?? null;
 }
 
+/**
+ * Registra el consentimiento explícito del alumno para publicar sus datos (RGPD):
+ * fija `consent_at` si aún no constaba y audita el cambio. Idempotente (conserva
+ * la fecha del primer consentimiento). Sin consentimiento, el alumno no es
+ * consultable por empresas (ver `obtenerAlumnoPublico`).
+ *
+ * @returns la ficha actualizada, o `null` si el alumno no existe.
+ */
+export async function registrarConsentimiento(
+  sql: Sql,
+  userId: string,
+  idActor: string | null,
+): Promise<FichaStudent | null> {
+  const resultado = await sql.begin(async (tx) => {
+    const previas = await tx<FichaStudent[]>`
+      select ${PROY_FICHA(tx)} from "Student" where user_id = ${userId} for update
+    `;
+    const previa = previas[0];
+    if (!previa) return null;
+    if (previa.consent_at !== null) return previa; // ya consintió: idempotente.
+
+    const filas = await tx<FichaStudent[]>`
+      update "Student" set consent_at = now() where user_id = ${userId}
+      returning ${PROY_FICHA(tx)}
+    `;
+    const actualizada = filas[0]!;
+    await registrarAuditoria(tx, {
+      idUsuario: idActor,
+      tabla: 'Student',
+      idRegistro: previa.id,
+      operacion: 'UPDATE',
+      datosAnteriores: { consent_at: previa.consent_at },
+      datosNuevos: { consent_at: actualizada.consent_at },
+    });
+    return actualizada;
+  });
+  return (resultado as FichaStudent | null) ?? null;
+}
+
 async function cambiarEstadoInterno(
   sql: Sql,
   columna: 'id' | 'user_id',
@@ -259,14 +298,15 @@ export interface AlumnoPublico {
 
 /**
  * Obtiene la proyección pública de un alumno para una empresa. Enforcement: solo
- * devuelve alumnos **activos**; un alumno inactivo no es consultable (→ `null`).
- * El filtrado fino por campo (`privacy`) llegará con el escaparate (fase 2).
+ * devuelve alumnos **activos** y **con consentimiento** (`consent_at` no nulo);
+ * un alumno inactivo o sin consentir no es consultable (→ `null`). El filtrado
+ * fino por campo (`privacy`) llegará con el escaparate (fase 2).
  */
 export async function obtenerAlumnoPublico(sql: Sql, studentId: string): Promise<AlumnoPublico | null> {
   const filas = await sql<AlumnoPublico[]>`
     select id, edition_id, nombre, foto_url, bio, ubicacion, disponibilidad_traslado,
            modalidad, estado_laboral, cv_url, linkedin, github
-    from "Student" where id = ${studentId} and estado = 'activo'
+    from "Student" where id = ${studentId} and estado = 'activo' and consent_at is not null
   `;
   return filas[0] ?? null;
 }

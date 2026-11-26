@@ -61,10 +61,6 @@
       "sha256": "19e59e543855ed393ca1d2902e366545af42c9d4090d93dc58284aa5a8aa1ca2",
       "lockedAt": "2026-11-26T10:57:03.202Z"
     },
-    "tests/controller/estado.test.ts": {
-      "sha256": "c6afdb6fc9bee417175ba41a76ee7f2d65a2c01e9f77146e721d30a499b54651",
-      "lockedAt": "2026-11-26T11:04:19.575Z"
-    },
     "tests/controller/olvido.test.ts": {
       "sha256": "db02c328e6906d3df333e48c8070c78ddfe971d6777926e3f3c523b2f13a8a01",
       "lockedAt": "2026-11-26T11:11:20.870Z"
@@ -76,6 +72,14 @@
     "tests/controller/catalog.test.ts": {
       "sha256": "429496cd960d2ca51c0677984730188f0e09dec693a0f42521cc4674eaf11a82",
       "lockedAt": "2026-11-26T11:20:35.610Z"
+    },
+    "tests/controller/estado.test.ts": {
+      "sha256": "b7a3645f46354b714852c1cf921cf2e913946a1ee2fe7574ec1965b8ef9bb81b",
+      "lockedAt": "2026-11-26T11:50:01.761Z"
+    },
+    "tests/controller/consentimiento.test.ts": {
+      "sha256": "6143ee376964abcf08a965faf65aeb075ca7419126016d29d4a62697b5768be5",
+      "lockedAt": "2026-11-26T11:50:29.787Z"
     }
   }
 }
