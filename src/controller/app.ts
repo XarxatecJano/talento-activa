@@ -12,6 +12,7 @@ import {
   cambiarEstadoPorUserId,
   cambiarEstadoAlumno,
   obtenerAlumnoPublico,
+  obtenerAlumnoPublicoConContacto,
   borrarAlumnoPorUserId,
   borrarAlumnoPorId,
   registrarConsentimiento,
@@ -562,6 +563,22 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
       const filtros = parsearFiltrosAlumno(c.req.query());
       if (!filtros) return c.json({ error: 'Datos no válidos' }, 400);
       return c.json(await listarAlumnosEscaparate(sql, filtros));
+    },
+  );
+
+  // Ficha completa de un alumno para la empresa (T27): proyección pública con la
+  // privacidad por campo aplicada e, incluyendo el email de contacto cuando el
+  // alumno consintió y no lo marcó privado ("contacto por revelación"). Un alumno
+  // no consultable (inactivo o sin consentir) o inexistente → 404.
+  app.get(
+    '/api/escaparate/alumnos/:id',
+    requiereAuth(sql),
+    requiereRol('SOCIO'),
+    requiereEmailVerificado(sql),
+    async (c) => {
+      const alumno = await obtenerAlumnoPublicoConContacto(sql, c.req.param('id'));
+      if (!alumno) return c.json({ error: 'No encontrado' }, 404);
+      return c.json(alumno);
     },
   );
 

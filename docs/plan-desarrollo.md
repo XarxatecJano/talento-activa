@@ -197,9 +197,20 @@ En cada conexión, de forma autónoma:
   (puros: combinaciones + no-fuga por campo privado) y
   `tests/controller/alumnos-escaparate.test.ts` (permisos + validación + filtrado
   combinado, requieren BD).
-- [ ] **T27 · Ficha completa para empresa + contacto:** `GET /api/escaparate/alumnos/:id`
+- [x] **T27 · Ficha completa para empresa + contacto:** `GET /api/escaparate/alumnos/:id`
   con la ficha pública (privacy aplicada) **incluyendo el email de contacto** cuando
   el alumno consintió y no lo marcó privado (contacto por revelación). Tests.
+  **Hecho:** `proyectarAlumnoConContacto` (pura: reutiliza `proyectarAlumnoPublico`
+  y añade `email` solo si `privacy.email !== false`) y `obtenerAlumnoPublicoConContacto`
+  (join `Student`×`User`, mismo enforcement que `obtenerAlumnoPublico`: solo
+  activos + consentidos) en `src/model/student.ts`; endpoint
+  `GET /api/escaparate/alumnos/:id` tras `requiereAuth`+`requiereRol('SOCIO')`+
+  `requiereEmailVerificado` (no consultable o inexistente → 404). El email vive en
+  `User`, no en la ficha, por eso no está en `CAMPOS_PRIVABLES`: su revelación se
+  rige por `campoVisible(privacy, 'email')`. Tests en `tests/model/ficha-contacto.test.ts`
+  (puros: revelación/ocultación del email + privacidad del resto) y
+  `tests/controller/ficha-contacto.test.ts` (permisos + enforcement + revelación,
+  requieren BD).
 
 ### Empresa (acciones; solo SOCIO)
 - [ ] **T28 · Bookmarks:** `Company_student_rel` — guardar/quitar/listar perfiles de

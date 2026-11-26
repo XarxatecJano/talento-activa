@@ -388,6 +388,52 @@ export async function obtenerAlumnoPublico(sql: Sql, studentId: string): Promise
   return fila ? proyectarAlumnoPublico(fila) : null;
 }
 
+/**
+ * Proyección pública de un alumno con el **contacto** revelado (T27). Extiende la
+ * card pública con el email de contacto, que solo está presente cuando el alumno
+ * no lo marcó privado (`privacy.email !== false`). "Contacto por revelación": el
+ * email se expone a la empresa según el consentimiento y la privacidad del alumno.
+ */
+export interface AlumnoPublicoConContacto extends AlumnoPublico {
+  email?: string;
+}
+
+/**
+ * Construye la proyección pública con contacto: la card pública (privacidad por
+ * campo aplicada, ver `proyectarAlumnoPublico`) más el email, revelado solo si el
+ * campo `email` es visible en `privacy` (`!== false`). Función pura y testable.
+ */
+export function proyectarAlumnoConContacto(
+  fila: FilaPublica,
+  email: string,
+): AlumnoPublicoConContacto {
+  const pub = proyectarAlumnoPublico(fila) as AlumnoPublicoConContacto;
+  if (campoVisible(fila.privacy, 'email')) pub.email = email;
+  return pub;
+}
+
+/**
+ * Ficha pública completa de un alumno para una empresa, **con el email de
+ * contacto** (T27). Enforcement idéntico a `obtenerAlumnoPublico`: solo alumnos
+ * **activos** y **con consentimiento** son consultables (→ `null` en otro caso).
+ * El email (de la tabla `User`) se incluye solo si el alumno no lo marcó privado
+ * (`privacy.email !== false`); el resto de campos respeta la privacidad por campo.
+ */
+export async function obtenerAlumnoPublicoConContacto(
+  sql: Sql,
+  studentId: string,
+): Promise<AlumnoPublicoConContacto | null> {
+  const filas = await sql<(FilaPublica & { email: string })[]>`
+    select s.id, s.edition_id, s.nombre, s.foto_url, s.bio, s.ubicacion,
+           s.disponibilidad_traslado, s.modalidad, s.estado_laboral, s.cv_url,
+           s.linkedin, s.github, s.privacy, u.email
+    from "Student" s join "User" u on u.id = s.user_id
+    where s.id = ${studentId} and s.estado = 'activo' and s.consent_at is not null
+  `;
+  const fila = filas[0];
+  return fila ? proyectarAlumnoConContacto(fila, fila.email) : null;
+}
+
 function codigo(err: unknown): string | undefined {
   return typeof err === 'object' && err !== null ? (err as { code?: string }).code : undefined;
 }

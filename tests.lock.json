@@ -112,6 +112,14 @@
     "tests/controller/alumnos-escaparate.test.ts": {
       "sha256": "b55ff8062c7686ffae48e55e6bceb1a32b74159484bba843298017b305d0c6fe",
       "lockedAt": "2026-11-26T16:11:31.609Z"
+    },
+    "tests/model/ficha-contacto.test.ts": {
+      "sha256": "f30bddbb5924caac288a8c736aeec64085ef058530f65d9d1d5c1435a3ca6050",
+      "lockedAt": "2026-11-26T17:08:01.993Z"
+    },
+    "tests/controller/ficha-contacto.test.ts": {
+      "sha256": "4eae5d497d740ceeb5c461297c27d87ecdc11306e2d23e8e94da7d298bba44fc",
+      "lockedAt": "2026-11-26T17:08:01.993Z"
     }
   }
 }
