@@ -200,6 +200,47 @@ export function cambiarEstadoAlumno(
   return cambiarEstadoInterno(sql, 'id', studentId, estado, idActor);
 }
 
+async function borrarAlumnoInterno(
+  sql: Sql,
+  columna: 'id' | 'user_id',
+  valor: string,
+  idActor: string | null,
+): Promise<boolean> {
+  const borrado = await sql.begin(async (tx) => {
+    const previas = await tx<{ id: string; user_id: string; nombre: string; edition_id: string; estado: EstadoStudent }[]>`
+      select id, user_id, nombre, edition_id, estado from "Student"
+      where ${tx(columna)} = ${valor} for update
+    `;
+    const previa = previas[0];
+    if (!previa) return false;
+
+    // Audita el borrado (snapshot sin datos sensibles) antes de eliminar.
+    await registrarAuditoria(tx, {
+      idUsuario: idActor,
+      tabla: 'Student',
+      idRegistro: previa.id,
+      operacion: 'DELETE',
+      datosAnteriores: { nombre: previa.nombre, edition_id: previa.edition_id, estado: previa.estado },
+    });
+
+    // Borrar el usuario arrastra en cascada Student y todos sus datos
+    // (proyectos, skills, idiomas, bookmarks, Reminder_state, sesiones, tokens).
+    await tx`delete from "User" where id = ${previa.user_id}`;
+    return true;
+  });
+  return borrado as boolean;
+}
+
+/** Derecho al olvido: borra al alumno y todos sus datos por su user_id (uso: el propio alumno). */
+export function borrarAlumnoPorUserId(sql: Sql, userId: string, idActor: string | null): Promise<boolean> {
+  return borrarAlumnoInterno(sql, 'user_id', userId, idActor);
+}
+
+/** Derecho al olvido: borra al alumno y todos sus datos por su id de Student (uso: admin). */
+export function borrarAlumnoPorId(sql: Sql, studentId: string, idActor: string | null): Promise<boolean> {
+  return borrarAlumnoInterno(sql, 'id', studentId, idActor);
+}
+
 /** Proyección pública de un alumno para empresas (sin email ni privacy). */
 export interface AlumnoPublico {
   id: string;

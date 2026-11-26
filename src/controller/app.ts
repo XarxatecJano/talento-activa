@@ -12,6 +12,8 @@ import {
   cambiarEstadoPorUserId,
   cambiarEstadoAlumno,
   obtenerAlumnoPublico,
+  borrarAlumnoPorUserId,
+  borrarAlumnoPorId,
 } from '../model/student.js';
 import type { CambiosFicha, EstadoStudent } from '../model/student.js';
 import { crearEmpresa, listarEmpresas, obtenerEmpresa, marcarSocia } from '../model/company.js';
@@ -303,6 +305,28 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     const student = await cambiarEstadoAlumno(sql, c.req.param('id'), body.estado as EstadoStudent, actor.id);
     if (!student) return c.json({ error: 'No encontrado' }, 404);
     return c.json(student);
+  });
+
+  // Derecho al olvido: el alumno borra su cuenta y todos sus datos (cascada).
+  app.delete(
+    '/api/alumnos/me',
+    requiereAuth(sql),
+    requiereRol('ALUMNO'),
+    requiereEmailVerificado(sql),
+    async (c) => {
+      const actor = c.get('actor');
+      const borrado = await borrarAlumnoPorUserId(sql, actor.id, actor.id);
+      if (!borrado) return c.json({ error: 'Ficha no encontrada' }, 404);
+      return c.body(null, 204);
+    },
+  );
+
+  // Admin ejerce el borrado de un alumno (derecho al olvido).
+  app.delete('/api/alumnos/:id', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+    const actor = c.get('actor');
+    const borrado = await borrarAlumnoPorId(sql, c.req.param('id'), actor.id);
+    if (!borrado) return c.json({ error: 'No encontrado' }, 404);
+    return c.body(null, 204);
   });
 
   // Empresa consulta un alumno (solo activos; enforcement de visibilidad).

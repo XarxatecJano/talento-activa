@@ -64,6 +64,10 @@
     "tests/controller/estado.test.ts": {
       "sha256": "c6afdb6fc9bee417175ba41a76ee7f2d65a2c01e9f77146e721d30a499b54651",
       "lockedAt": "2026-11-26T11:04:19.575Z"
+    },
+    "tests/controller/olvido.test.ts": {
+      "sha256": "db02c328e6906d3df333e48c8070c78ddfe971d6777926e3f3c523b2f13a8a01",
+      "lockedAt": "2026-11-26T11:11:20.870Z"
     }
   }
 }
