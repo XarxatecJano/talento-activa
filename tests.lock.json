@@ -128,6 +128,14 @@
     "tests/controller/bookmark.test.ts": {
       "sha256": "f495522ec1c82d0adbdcc5fa834735e5443e0d8a4d641e0142862eff3dcb2786",
       "lockedAt": "2026-11-26T18:09:47.977Z"
+    },
+    "tests/model/empleo.test.ts": {
+      "sha256": "96bd42d64fe703c676828d7ded623ab276642ef765cfd022e6acb36ffce6e364",
+      "lockedAt": "2026-11-26T19:10:27.341Z"
+    },
+    "tests/controller/empleo.test.ts": {
+      "sha256": "49c68c49afe3818aef8748b31daf0e875a767480aa3ff2b6f7fc51c9a86ace94",
+      "lockedAt": "2026-11-26T19:10:27.342Z"
     }
   }
 }

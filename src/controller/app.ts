@@ -33,6 +33,11 @@ import {
   listarBookmarks,
 } from '../model/bookmark.js';
 import {
+  asignarEmpresaActual,
+  quitarEmpresaActual,
+  listarAlumnosEnEmpresasSocias,
+} from '../model/empleo.js';
+import {
   crearProyecto,
   listarProyectosPorUserId,
   actualizarProyecto,
@@ -511,6 +516,29 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     return c.body(null, 204);
   });
 
+  // Admin asigna la empresa socia en la que trabaja un alumno (T29). La empresa
+  // debe existir y ser socia (`es_socia`); si no → 400. Alumno inexistente → 404.
+  app.put('/api/alumnos/:id/empresa-actual', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+    const actor = c.get('actor');
+    const body = (await c.req.json().catch(() => null)) as { company_id?: unknown } | null;
+    if (!body || typeof body.company_id !== 'string' || body.company_id.trim() === '') {
+      return c.json({ error: 'Datos no válidos' }, 400);
+    }
+    const r = await asignarEmpresaActual(sql, c.req.param('id'), body.company_id, actor.id);
+    if (r === 'sin-alumno') return c.json({ error: 'No encontrado' }, 404);
+    if (r === 'sin-empresa') return c.json({ error: 'Empresa socia no válida' }, 400);
+    return c.body(null, 204);
+  });
+
+  // Admin quita la empresa actual de un alumno (T29). Idempotente. 404 si el
+  // alumno no existe.
+  app.delete('/api/alumnos/:id/empresa-actual', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+    const actor = c.get('actor');
+    const ok = await quitarEmpresaActual(sql, c.req.param('id'), actor.id);
+    if (!ok) return c.json({ error: 'No encontrado' }, 404);
+    return c.body(null, 204);
+  });
+
   // Empresa consulta un alumno (solo activos; enforcement de visibilidad).
   app.get(
     '/api/alumnos/:id',
@@ -555,6 +583,17 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     requiereRol('SOCIO'),
     requiereEmailVerificado(sql),
     async (c) => c.json(await listarProyectosEscaparate(sql)),
+  );
+
+  // Sección "alumnos que trabajan en empresas socias" (T29): solo alumnos
+  // consultables (activos + consentidos) cuya empresa actual es socia, con la
+  // privacidad por campo aplicada.
+  app.get(
+    '/api/escaparate/empresas-socias',
+    requiereAuth(sql),
+    requiereRol('SOCIO'),
+    requiereEmailVerificado(sql),
+    async (c) => c.json(await listarAlumnosEnEmpresasSocias(sql)),
   );
 
   // Búsqueda y filtrado estructurado de alumnos (T26): filtros combinables

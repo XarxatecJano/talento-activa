@@ -229,9 +229,25 @@ En cada conexión, de forma autónoma:
   `tests/model/bookmark.test.ts` (puros: proyección + privacidad) y
   `tests/controller/bookmark.test.ts` (permisos + idempotencia + privacidad +
   no-consultable + aislamiento entre empresas, requieren BD).
-- [ ] **T29 · Alumnos en empresas socias:** gestión de `Student.current_company_id`
+- [x] **T29 · Alumnos en empresas socias:** gestión de `Student.current_company_id`
   (asignar/quitar, por admin) y sección "alumnos que trabajan en empresas socias".
-  Tests.
+  Tests. **Hecho:** `src/model/empleo.ts` con `proyectarAlumnoEnEmpresa`/
+  `proyectarAlumnosEnEmpresas` (puras: card pública + empresa, privacidad por campo
+  aplicada, reutilizan `proyectarAlumnoPublico`), `asignarEmpresaActual`
+  (`'ok' | 'sin-alumno' | 'sin-empresa'`; solo empresas **socias** existentes;
+  audita el UPDATE de `current_company_id`), `quitarEmpresaActual` (pone a `null`,
+  idempotente, audita si cambia) y `listarAlumnosEnEmpresasSocias` (join
+  `Student`×`Company` con enforcement en SQL: solo alumnos consultables
+  activo+consentido cuya empresa actual es socia). Endpoints ADMIN
+  `PUT/DELETE /api/alumnos/:id/empresa-actual` (empresa no socia/inexistente → 400,
+  alumno inexistente → 404) y `GET /api/escaparate/empresas-socias` tras
+  `requiereAuth`+`requiereRol('SOCIO')`+`requiereEmailVerificado`. **Decisiones:**
+  (1) `current_company_id` solo admite empresas con `es_socia = true` (el campo
+  modela empleo en empresa socia); (2) la sección es empresa-facing y respeta la
+  visibilidad del alumno (como el resto del escaparate), así un alumno asignado
+  pero no consultable no aparece. Tests en `tests/model/empleo.test.ts` (puros +
+  BD) y `tests/controller/empleo.test.ts` (permisos + asignar/quitar + validación
+  + enforcement, requieren BD).
 
 ### Frontend (VanillaJS + TypeScript) — en paralelo
 - [ ] **T30 · Andamiaje frontend:** bundler (vite), estructura en `src/view/`,
