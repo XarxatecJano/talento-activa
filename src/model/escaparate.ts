@@ -80,3 +80,85 @@ export async function obtenerEdicionEscaparate(
   `;
   return agruparEscaparate([ed], filas)[0]!;
 }
+
+/**
+ * Campos públicos de un proyecto (sin `student_id`, que es interno). La miniatura
+ * puede ser nula (subida manual, 1ª iteración).
+ */
+export interface ProyectoEscaparateBase {
+  id: string;
+  titulo: string;
+  descripcion: string | null;
+  url: string;
+  thumbnail_url: string | null;
+}
+
+/**
+ * Proyecto del escaparate: datos públicos del proyecto más la card pública de su
+ * alumno dueño (proyección con privacidad por campo aplicada). El escaparate de
+ * proyectos no tiene privacidad propia: un proyecto se expone **solo** si su
+ * alumno dueño es consultable (activo + consentido).
+ */
+export interface ProyectoEscaparate extends ProyectoEscaparateBase {
+  alumno: AlumnoPublico;
+}
+
+/**
+ * Combina los campos públicos de un proyecto con la card pública de su alumno
+ * dueño, aplicando la privacidad por campo del alumno (reutiliza
+ * `proyectarAlumnoPublico`). Función pura y testable sin BD.
+ */
+export function proyectarProyectoEscaparate(
+  proyecto: ProyectoEscaparateBase,
+  alumno: FilaPublica,
+): ProyectoEscaparate {
+  return {
+    id: proyecto.id,
+    titulo: proyecto.titulo,
+    descripcion: proyecto.descripcion,
+    url: proyecto.url,
+    thumbnail_url: proyecto.thumbnail_url,
+    alumno: proyectarAlumnoPublico(alumno),
+  };
+}
+
+/** Fila del join Project×Student para la proyección pública del escaparate. */
+interface FilaProyectoPublica extends FilaPublica {
+  proyecto_id: string;
+  titulo: string;
+  descripcion: string | null;
+  url: string;
+  thumbnail_url: string | null;
+}
+
+/**
+ * Escaparate de proyectos: todos los proyectos cuyos alumnos dueños son
+ * consultables (activos + consentidos), con la privacidad por campo del alumno
+ * aplicada. Enforcement en SQL (join con `Student`); los proyectos de alumnos
+ * inactivos o sin consentimiento nunca se exponen.
+ */
+export async function listarProyectosEscaparate(sql: Sql): Promise<ProyectoEscaparate[]> {
+  const filas = await sql<FilaProyectoPublica[]>`
+    select
+      p.id as proyecto_id, p.titulo, p.descripcion, p.url, p.thumbnail_url,
+      s.id, s.edition_id, s.nombre, s.foto_url, s.bio, s.ubicacion,
+      s.disponibilidad_traslado, s.modalidad, s.estado_laboral, s.cv_url,
+      s.linkedin, s.github, s.privacy
+    from "Project" p
+    join "Student" s on s.id = p.student_id
+    where s.estado = 'activo' and s.consent_at is not null
+    order by p.created_at desc
+  `;
+  return filas.map((f) =>
+    proyectarProyectoEscaparate(
+      {
+        id: f.proyecto_id,
+        titulo: f.titulo,
+        descripcion: f.descripcion,
+        url: f.url,
+        thumbnail_url: f.thumbnail_url,
+      },
+      f,
+    ),
+  );
+}

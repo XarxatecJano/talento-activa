@@ -96,6 +96,14 @@
     "tests/controller/escaparate.test.ts": {
       "sha256": "fcb3b6fd16ecb393bbd2c780e61242622310f74abec9ea37561107aaa5a83a65",
       "lockedAt": "2026-11-26T14:06:48.008Z"
+    },
+    "tests/model/proyectos-escaparate.test.ts": {
+      "sha256": "0ec4f613b07e7764836503d07c5d6f7e2bdfcbe0670628f0b5688e8379f96839",
+      "lockedAt": "2026-11-26T15:10:33.661Z"
+    },
+    "tests/controller/proyectos-escaparate.test.ts": {
+      "sha256": "0cc545847b136d4c7d5579891f5f7c5b66862ce16b4fa4161573746bdcd0b3b8",
+      "lockedAt": "2026-11-26T15:10:33.661Z"
     }
   }
 }

@@ -18,7 +18,7 @@ import {
 } from '../model/student.js';
 import type { CambiosFicha, EstadoStudent } from '../model/student.js';
 import { crearEmpresa, listarEmpresas, obtenerEmpresa, marcarSocia } from '../model/company.js';
-import { listarEscaparate, obtenerEdicionEscaparate } from '../model/escaparate.js';
+import { listarEscaparate, obtenerEdicionEscaparate, listarProyectosEscaparate } from '../model/escaparate.js';
 import {
   crearProyecto,
   listarProyectosPorUserId,
@@ -503,6 +503,14 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
       if (!ed) return c.json({ error: 'No encontrada' }, 404);
       return c.json(ed);
     },
+  );
+
+  app.get(
+    '/api/escaparate/proyectos',
+    requiereAuth(sql),
+    requiereRol('SOCIO'),
+    requiereEmailVerificado(sql),
+    async (c) => c.json(await listarProyectosEscaparate(sql)),
   );
 
   // --- Empresas (alta por invitación; marcado de socia) -----------------------

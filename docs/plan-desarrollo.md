@@ -169,8 +169,18 @@ En cada conexión, de forma autónoma:
   bajo `/api/escaparate/*` tras `requiereAuth`+`requiereRol('SOCIO')`+
   `requiereEmailVerificado`. Reutiliza `proyectarAlumnoPublico` (T23). Tests en
   `tests/model/escaparate.test.ts` y `tests/controller/escaparate.test.ts`.
-- [ ] **T25 · Escaparate de proyectos:** `GET /api/escaparate/proyectos` con
-  miniatura, respetando la visibilidad del alumno dueño. Tests.
+- [x] **T25 · Escaparate de proyectos:** `GET /api/escaparate/proyectos` con
+  miniatura, respetando la visibilidad del alumno dueño. Tests. **Hecho:**
+  `proyectarProyectoEscaparate` (pura: combina los campos públicos del proyecto
+  con la card del alumno dueño vía `proyectarAlumnoPublico`) y
+  `listarProyectosEscaparate` (join `Project`×`Student` con enforcement en SQL:
+  solo dueños activos + consentidos) en `src/model/escaparate.ts`; endpoint
+  `GET /api/escaparate/proyectos` tras `requiereAuth`+`requiereRol('SOCIO')`+
+  `requiereEmailVerificado`. Un proyecto no tiene privacidad propia: se expone
+  solo si su alumno dueño es consultable, y la card del dueño respeta `privacy`.
+  Tests en `tests/model/proyectos-escaparate.test.ts` (puros, verifican el
+  filtrado) y `tests/controller/proyectos-escaparate.test.ts` (permisos +
+  enforcement, requieren BD).
 - [ ] **T26 · Búsqueda y filtrado estructurado:** `GET /api/escaparate/alumnos` con
   filtros combinables (`skill`, `edicion`, `modalidad`, `disponibilidad`,
   `estado_laboral`), solo sobre visibles. Tests de combinaciones.
