@@ -1,10 +1,10 @@
 import { serve } from '@hono/node-server';
-import { config } from 'dotenv';
+import { cargarEnv } from './env.js';
 import { createDb } from './model/db.js';
 import { crearApp } from './controller/app.js';
 
-// Carga .env (DATABASE_URL, etc.).
-config();
+// Carga el entorno: prod → .env; dev → .env + .env.local (prioridad).
+cargarEnv();
 
 const sql = createDb();
 const app = crearApp(sql);

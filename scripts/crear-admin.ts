@@ -1,13 +1,15 @@
 // Crea (o reactiva) el usuario ADMIN inicial, verificado.
 // Uso: tsx scripts/crear-admin.ts <email> <password>
 // El hash Argon2id se genera aquí (el seed.sql deja esto al backend a propósito).
-import { config } from 'dotenv';
+import { cargarEnv } from '../src/env.js';
 import { createDb } from '../src/model/db.js';
 import { crearUsuario } from '../src/model/user.js';
 import { crearTokenVerificacion, verificarEmail } from '../src/model/email_verification.js';
 import { EmailYaRegistradoError } from '../src/model/errors.js';
 
-config();
+// Por defecto opera sobre el entorno de desarrollo (.env.local). Para crear el
+// admin en producción: `NODE_ENV=production npm run crear-admin -- <email> <pass>`.
+cargarEnv();
 
 const email = process.argv[2];
 const password = process.argv[3];

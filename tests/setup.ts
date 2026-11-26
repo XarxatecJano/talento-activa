@@ -1,5 +1,6 @@
-// Carga las variables de entorno desde .env antes de ejecutar los tests.
-// El .env real no se versiona (está en .gitignore); ver .env.example.
-import { config } from 'dotenv';
+// Carga las variables de entorno antes de los tests. En desarrollo/test se usa
+// .env.local (BD de desarrollo) con prioridad sobre .env, de modo que los tests
+// no toquen la BD de producción. Ver src/env.ts y .env.example.
+import { cargarEnv } from '../src/env.js';
 
-config();
+cargarEnv();

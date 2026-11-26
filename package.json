@@ -6,7 +6,7 @@
   "description": "App web de perfiles de alumnos Xarxatec Activa para empresas.",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "start": "tsx src/server.ts",
+    "start": "NODE_ENV=production tsx src/server.ts",
     "crear-admin": "tsx scripts/crear-admin.ts",
     "test": "vitest run",
     "test:watch": "vitest",
