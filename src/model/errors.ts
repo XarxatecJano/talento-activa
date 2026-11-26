@@ -20,3 +20,11 @@ export class EmailYaRegistradoError extends Error {
     this.name = 'EmailYaRegistradoError';
   }
 }
+
+/** Un recurso con clave única ya existe (p. ej. nombre de skill/idioma). → 409. */
+export class RecursoDuplicadoError extends Error {
+  constructor(message = 'El recurso ya existe') {
+    super(message);
+    this.name = 'RecursoDuplicadoError';
+  }
+}

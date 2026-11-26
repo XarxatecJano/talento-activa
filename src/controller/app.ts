@@ -24,7 +24,17 @@ import {
   borrarProyecto,
 } from '../model/project.js';
 import type { CambiosProyecto } from '../model/project.js';
-import { DatosInvalidosError, EmailYaRegistradoError } from '../model/errors.js';
+import {
+  SKILL_CFG,
+  LANGUAGE_CFG,
+  crearItemCatalogo,
+  listarCatalogo,
+  asociarAlumno,
+  desasociarAlumno,
+  listarAsociacionesAlumno,
+  type CatalogoConfig,
+} from '../model/catalog.js';
+import { DatosInvalidosError, EmailYaRegistradoError, RecursoDuplicadoError } from '../model/errors.js';
 import { construirCookieSesion, construirCookieBorrado, leerTokenCookie } from './cookie.js';
 import { requiereAuth, requiereRol, requiereEmailVerificado, type AppEnv } from './middleware.js';
 
@@ -512,6 +522,71 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     if (!empresa) return c.json({ error: 'No encontrada' }, 404);
     return c.json(empresa);
   });
+
+  // --- Catálogos (skills, idiomas) + asociación N:M con nivel ------------------
+
+  const registrarCatalogo = (basePath: string, cfg: CatalogoConfig) => {
+    // Catálogo: crear (ADMIN) y listar (cualquier autenticado).
+    app.post(`/api/${basePath}`, requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+      const actor = c.get('actor');
+      const body = (await c.req.json().catch(() => null)) as { nombre?: unknown } | null;
+      if (!body || typeof body.nombre !== 'string') return c.json({ error: 'Datos no válidos' }, 400);
+      try {
+        const item = await crearItemCatalogo(sql, cfg, body.nombre, actor.id);
+        return c.json(item, 201);
+      } catch (err) {
+        if (err instanceof RecursoDuplicadoError) return c.json({ error: err.message }, 409);
+        if (err instanceof DatosInvalidosError) return c.json({ error: err.message }, 400);
+        throw err;
+      }
+    });
+
+    app.get(`/api/${basePath}`, requiereAuth(sql), async (c) => c.json(await listarCatalogo(sql, cfg)));
+
+    // Asociación del alumno con su nivel.
+    app.get(
+      `/api/alumnos/me/${basePath}`,
+      requiereAuth(sql),
+      requiereRol('ALUMNO'),
+      requiereEmailVerificado(sql),
+      async (c) => c.json(await listarAsociacionesAlumno(sql, cfg, c.get('actor').id)),
+    );
+
+    app.put(
+      `/api/alumnos/me/${basePath}/:id`,
+      requiereAuth(sql),
+      requiereRol('ALUMNO'),
+      requiereEmailVerificado(sql),
+      async (c) => {
+        const actor = c.get('actor');
+        const body = (await c.req.json().catch(() => null)) as { nivel?: unknown } | null;
+        if (!body || typeof body.nivel !== 'string') return c.json({ error: 'Datos no válidos' }, 400);
+        try {
+          const r = await asociarAlumno(sql, cfg, actor.id, c.req.param('id'), body.nivel, actor.id);
+          if (r !== 'ok') return c.json({ error: 'No encontrado' }, 404);
+          return c.json({ ok: true });
+        } catch (err) {
+          if (err instanceof DatosInvalidosError) return c.json({ error: err.message }, 400);
+          throw err;
+        }
+      },
+    );
+
+    app.delete(
+      `/api/alumnos/me/${basePath}/:id`,
+      requiereAuth(sql),
+      requiereRol('ALUMNO'),
+      requiereEmailVerificado(sql),
+      async (c) => {
+        const ok = await desasociarAlumno(sql, cfg, c.get('actor').id, c.req.param('id'), c.get('actor').id);
+        if (!ok) return c.json({ error: 'No encontrado' }, 404);
+        return c.body(null, 204);
+      },
+    );
+  };
+
+  registrarCatalogo('skills', SKILL_CFG);
+  registrarCatalogo('idiomas', LANGUAGE_CFG);
 
   return app;
 }
