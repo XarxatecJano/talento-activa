@@ -56,6 +56,10 @@
     "tests/controller/company.test.ts": {
       "sha256": "b8c310e76806cf6b641e132c64983acf5f94382ae5c2f94913392f9ba49df3d3",
       "lockedAt": "2026-11-26T10:50:36.574Z"
+    },
+    "tests/controller/ficha.test.ts": {
+      "sha256": "19e59e543855ed393ca1d2902e366545af42c9d4090d93dc58284aa5a8aa1ca2",
+      "lockedAt": "2026-11-26T10:57:03.202Z"
     }
   }
 }

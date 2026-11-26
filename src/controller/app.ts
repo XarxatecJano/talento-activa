@@ -5,11 +5,52 @@ import { crearSesion, eliminarSesionPorToken } from '../model/session.js';
 import { obtenerUsuarioPublico, crearUsuario, esRol } from '../model/user.js';
 import { crearTokenVerificacion, verificarEmail } from '../model/email_verification.js';
 import { crearEdicion, listarEdiciones, obtenerEdicion, cerrarEdicion } from '../model/edition.js';
-import { crearAlumno } from '../model/student.js';
+import { crearAlumno, obtenerFichaPorUserId, actualizarFicha } from '../model/student.js';
+import type { CambiosFicha } from '../model/student.js';
 import { crearEmpresa, listarEmpresas, obtenerEmpresa, marcarSocia } from '../model/company.js';
 import { DatosInvalidosError, EmailYaRegistradoError } from '../model/errors.js';
 import { construirCookieSesion, construirCookieBorrado, leerTokenCookie } from './cookie.js';
-import { requiereAuth, requiereRol, type AppEnv } from './middleware.js';
+import { requiereAuth, requiereRol, requiereEmailVerificado, type AppEnv } from './middleware.js';
+
+/**
+ * Valida el body de edición de ficha y devuelve los cambios admitidos, o `null`
+ * si algún campo presente es inválido o no hay ningún campo editable.
+ */
+function parsearCambiosFicha(body: unknown): CambiosFicha | null {
+  if (typeof body !== 'object' || body === null) return null;
+  const b = body as Record<string, unknown>;
+  const cambios: CambiosFicha = {};
+  const esStrONull = (v: unknown) => v === null || typeof v === 'string';
+
+  if ('nombre' in b) {
+    if (typeof b.nombre !== 'string' || b.nombre.trim() === '') return null;
+    cambios.nombre = b.nombre;
+  }
+  for (const k of ['foto_url', 'bio', 'ubicacion', 'cv_url', 'linkedin', 'github'] as const) {
+    if (k in b) {
+      if (!esStrONull(b[k])) return null;
+      cambios[k] = b[k] as string | null;
+    }
+  }
+  if ('disponibilidad_traslado' in b) {
+    if (typeof b.disponibilidad_traslado !== 'boolean') return null;
+    cambios.disponibilidad_traslado = b.disponibilidad_traslado;
+  }
+  if ('modalidad' in b) {
+    if (b.modalidad !== null && !['remoto', 'presencial', 'hibrido'].includes(b.modalidad as string)) return null;
+    cambios.modalidad = b.modalidad as CambiosFicha['modalidad'];
+  }
+  if ('estado_laboral' in b) {
+    if (b.estado_laboral !== null && !['buscando', 'trabajando'].includes(b.estado_laboral as string)) return null;
+    cambios.estado_laboral = b.estado_laboral as CambiosFicha['estado_laboral'];
+  }
+  if ('privacy' in b) {
+    if (typeof b.privacy !== 'object' || b.privacy === null || Array.isArray(b.privacy)) return null;
+    cambios.privacy = b.privacy as Record<string, unknown>;
+  }
+
+  return Object.keys(cambios).length > 0 ? cambios : null;
+}
 import { enviadorNoop, type EnviadorEmail } from './email.js';
 
 export interface OpcionesApp {
@@ -196,6 +237,36 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
       throw err;
     }
   });
+
+  // --- Ficha propia del alumno ------------------------------------------------
+
+  app.get(
+    '/api/alumnos/me',
+    requiereAuth(sql),
+    requiereRol('ALUMNO'),
+    requiereEmailVerificado(sql),
+    async (c) => {
+      const actor = c.get('actor');
+      const ficha = await obtenerFichaPorUserId(sql, actor.id);
+      if (!ficha) return c.json({ error: 'Ficha no encontrada' }, 404);
+      return c.json(ficha);
+    },
+  );
+
+  app.patch(
+    '/api/alumnos/me',
+    requiereAuth(sql),
+    requiereRol('ALUMNO'),
+    requiereEmailVerificado(sql),
+    async (c) => {
+      const actor = c.get('actor');
+      const cambios = parsearCambiosFicha(await c.req.json().catch(() => null));
+      if (!cambios) return c.json({ error: 'Datos no válidos' }, 400);
+      const ficha = await actualizarFicha(sql, actor.id, cambios, actor.id);
+      if (!ficha) return c.json({ error: 'Ficha no encontrada' }, 404);
+      return c.json(ficha);
+    },
+  );
 
   // --- Empresas (alta por invitación; marcado de socia) -----------------------
 

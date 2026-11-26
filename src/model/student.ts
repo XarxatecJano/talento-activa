@@ -1,4 +1,4 @@
-import type { Sql } from 'postgres';
+import type { Sql, ISql } from 'postgres';
 import { insertarUsuario } from './user.js';
 import type { UsuarioPublico } from './user.js';
 import { registrarAuditoria } from './audit.js';
@@ -23,6 +23,130 @@ export interface DatosNuevoAlumno {
   password: string;
   nombre: string;
   edition_id: string;
+}
+
+export type Modalidad = 'remoto' | 'presencial' | 'hibrido';
+export type EstadoLaboral = 'buscando' | 'trabajando';
+
+/** Ficha completa del alumno (proyección que ve su dueño). */
+export interface FichaStudent {
+  id: string;
+  user_id: string;
+  edition_id: string;
+  current_company_id: string | null;
+  nombre: string;
+  foto_url: string | null;
+  bio: string | null;
+  ubicacion: string | null;
+  disponibilidad_traslado: boolean;
+  modalidad: Modalidad | null;
+  estado_laboral: EstadoLaboral | null;
+  cv_url: string | null;
+  linkedin: string | null;
+  github: string | null;
+  consent_at: string | null;
+  estado: EstadoStudent;
+  privacy: Record<string, unknown>;
+  filled_at: string | null;
+  created_at: string;
+}
+
+/** Cambios admitidos al editar la ficha propia (todos opcionales). */
+export interface CambiosFicha {
+  nombre?: string;
+  foto_url?: string | null;
+  bio?: string | null;
+  ubicacion?: string | null;
+  disponibilidad_traslado?: boolean;
+  modalidad?: Modalidad | null;
+  estado_laboral?: EstadoLaboral | null;
+  cv_url?: string | null;
+  linkedin?: string | null;
+  github?: string | null;
+  privacy?: Record<string, unknown>;
+}
+
+const PROY_FICHA = (sql: ISql) => sql`
+  id, user_id, edition_id, current_company_id, nombre, foto_url, bio, ubicacion,
+  disponibilidad_traslado, modalidad, estado_laboral, cv_url, linkedin, github,
+  consent_at::text as consent_at, estado, privacy,
+  filled_at::text as filled_at, created_at::text as created_at
+`;
+
+/** Obtiene la ficha completa de un alumno por su user_id, o `null`. */
+export async function obtenerFichaPorUserId(sql: Sql, userId: string): Promise<FichaStudent | null> {
+  const filas = await sql<FichaStudent[]>`
+    select ${PROY_FICHA(sql)} from "Student" where user_id = ${userId}
+  `;
+  return filas[0] ?? null;
+}
+
+/**
+ * Actualiza la ficha propia del alumno (solo los campos presentes en `cambios`),
+ * respetando la privacidad por campo (`privacy` jsonb), y audita el UPDATE con el
+ * diff de los campos enviados.
+ *
+ * @returns la ficha actualizada, o `null` si el alumno no existe.
+ */
+export async function actualizarFicha(
+  sql: Sql,
+  userId: string,
+  cambios: CambiosFicha,
+  idActor: string | null,
+): Promise<FichaStudent | null> {
+  const resultado = await sql.begin(async (tx) => {
+    const previas = await tx<FichaStudent[]>`
+      select ${PROY_FICHA(tx)} from "Student" where user_id = ${userId} for update
+    `;
+    const previa = previas[0];
+    if (!previa) return null;
+
+    const tiene = <K extends keyof CambiosFicha>(k: K): boolean =>
+      Object.prototype.hasOwnProperty.call(cambios, k);
+    const elegir = <K extends keyof FichaStudent & keyof CambiosFicha>(k: K): FichaStudent[K] =>
+      (tiene(k) ? (cambios[k] as FichaStudent[K]) : previa[k]);
+
+    const privacy = tiene('privacy') ? (cambios.privacy as Record<string, unknown>) : previa.privacy;
+
+    await tx`
+      update "Student" set
+        nombre = ${elegir('nombre')},
+        foto_url = ${elegir('foto_url')},
+        bio = ${elegir('bio')},
+        ubicacion = ${elegir('ubicacion')},
+        disponibilidad_traslado = ${elegir('disponibilidad_traslado')},
+        modalidad = ${elegir('modalidad')},
+        estado_laboral = ${elegir('estado_laboral')},
+        cv_url = ${elegir('cv_url')},
+        linkedin = ${elegir('linkedin')},
+        github = ${elegir('github')},
+        privacy = ${tx.json(privacy as Parameters<typeof tx.json>[0])}
+      where user_id = ${userId}
+    `;
+
+    // Diff auditado: solo los campos enviados.
+    const claves = Object.keys(cambios) as (keyof CambiosFicha)[];
+    const datosAnteriores: Record<string, unknown> = {};
+    const datosNuevos: Record<string, unknown> = {};
+    for (const k of claves) {
+      datosAnteriores[k] = (previa as unknown as Record<string, unknown>)[k];
+      datosNuevos[k] = cambios[k];
+    }
+    await registrarAuditoria(tx, {
+      idUsuario: idActor,
+      tabla: 'Student',
+      idRegistro: previa.id,
+      operacion: 'UPDATE',
+      datosAnteriores,
+      datosNuevos,
+    });
+
+    const filas = await tx<FichaStudent[]>`
+      select ${PROY_FICHA(tx)} from "Student" where user_id = ${userId}
+    `;
+    return filas[0]!;
+  });
+  return (resultado as FichaStudent | null) ?? null;
 }
 
 function codigo(err: unknown): string | undefined {
