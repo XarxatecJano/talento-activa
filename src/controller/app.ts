@@ -6,6 +6,7 @@ import { obtenerUsuarioPublico, crearUsuario, esRol } from '../model/user.js';
 import { crearTokenVerificacion, verificarEmail } from '../model/email_verification.js';
 import { crearEdicion, listarEdiciones, obtenerEdicion, cerrarEdicion } from '../model/edition.js';
 import { crearAlumno } from '../model/student.js';
+import { crearEmpresa, listarEmpresas, obtenerEmpresa, marcarSocia } from '../model/company.js';
 import { DatosInvalidosError, EmailYaRegistradoError } from '../model/errors.js';
 import { construirCookieSesion, construirCookieBorrado, leerTokenCookie } from './cookie.js';
 import { requiereAuth, requiereRol, type AppEnv } from './middleware.js';
@@ -194,6 +195,68 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
       if (err instanceof DatosInvalidosError) return c.json({ error: err.message }, 400);
       throw err;
     }
+  });
+
+  // --- Empresas (alta por invitación; marcado de socia) -----------------------
+
+  app.post('/api/empresas', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+    const actor = c.get('actor');
+    const body = (await c.req.json().catch(() => null)) as
+      | { nombre?: unknown; email?: unknown; password?: unknown; contacto?: unknown; es_socia?: unknown }
+      | null;
+    if (
+      !body ||
+      typeof body.nombre !== 'string' ||
+      typeof body.email !== 'string' ||
+      typeof body.password !== 'string'
+    ) {
+      return c.json({ error: 'Datos no válidos' }, 400);
+    }
+    try {
+      const { usuario, company } = await crearEmpresa(
+        sql,
+        {
+          nombre: body.nombre,
+          email: body.email,
+          password: body.password,
+          contacto: typeof body.contacto === 'string' ? body.contacto : null,
+          es_socia: typeof body.es_socia === 'boolean' ? body.es_socia : false,
+        },
+        actor.id,
+      );
+      try {
+        const { token } = await crearTokenVerificacion(sql, usuario.id);
+        await enviador.enviarVerificacion(usuario.email, token);
+      } catch {
+        /* el fallo de envío no invalida el alta */
+      }
+      return c.json({ company, usuario }, 201);
+    } catch (err) {
+      if (err instanceof EmailYaRegistradoError) return c.json({ error: err.message }, 409);
+      if (err instanceof DatosInvalidosError) return c.json({ error: err.message }, 400);
+      throw err;
+    }
+  });
+
+  app.get('/api/empresas', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+    return c.json(await listarEmpresas(sql));
+  });
+
+  app.get('/api/empresas/:id', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+    const empresa = await obtenerEmpresa(sql, c.req.param('id'));
+    if (!empresa) return c.json({ error: 'No encontrada' }, 404);
+    return c.json(empresa);
+  });
+
+  app.patch('/api/empresas/:id', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+    const actor = c.get('actor');
+    const body = (await c.req.json().catch(() => null)) as { es_socia?: unknown } | null;
+    if (!body || typeof body.es_socia !== 'boolean') {
+      return c.json({ error: 'Datos no válidos' }, 400);
+    }
+    const empresa = await marcarSocia(sql, c.req.param('id'), body.es_socia, actor.id);
+    if (!empresa) return c.json({ error: 'No encontrada' }, 404);
+    return c.json(empresa);
   });
 
   return app;
