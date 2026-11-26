@@ -115,6 +115,9 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
   const enviador = opciones.enviador ?? enviadorNoop;
   const app = new Hono<AppEnv>();
 
+  // GET /api/health — señal de vida (sin autenticación).
+  app.get('/api/health', (c) => c.json({ status: 'ok' }));
+
   // POST /api/auth/login — crea una sesión nueva (invalidando la previa de la
   // cookie) si las credenciales son válidas. Anti-enumeración en `autenticar`.
   app.post('/api/auth/login', async (c) => {
