@@ -47,3 +47,18 @@ export async function hashPassword(password: string): Promise<string> {
 export async function verifyPassword(hash: string, password: string): Promise<boolean> {
   return argon2Verify(hash, password);
 }
+
+let hashSenueloCache: string | undefined;
+
+/**
+ * Devuelve un hash Argon2id "señuelo" (memoizado) contra el que verificar cuando
+ * el email no existe, para igualar el coste temporal del login y evitar
+ * enumeración de cuentas (ver anti-enumeración en CLAUDE.md). Nunca corresponde
+ * a ninguna contraseña real.
+ */
+export async function hashSenuelo(): Promise<string> {
+  if (hashSenueloCache === undefined) {
+    hashSenueloCache = await argon2Hash('senuelo-anti-enumeracion-sin-uso', OPCIONES_ARGON2);
+  }
+  return hashSenueloCache;
+}

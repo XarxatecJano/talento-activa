@@ -24,6 +24,10 @@
     "tests/controller/cookie.test.ts": {
       "sha256": "ca980955b16d99238e38c3b7ea03c762f15e03e9598116809862c0bcaefdc6dd",
       "lockedAt": "2026-11-26T10:02:09.320Z"
+    },
+    "tests/controller/login.test.ts": {
+      "sha256": "05291f207bd24aa9e3477de0feaf9312f954008e0148340b357d75164af874b1",
+      "lockedAt": "2026-11-26T10:05:28.215Z"
     }
   }
 }

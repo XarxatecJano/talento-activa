@@ -37,6 +37,27 @@ export function normalizarEmail(email: string): string {
   return limpio;
 }
 
+/** Credenciales internas para login: incluye el hash (nunca sale al exterior). */
+export interface Credenciales {
+  id: string;
+  rol: Rol;
+  password_hash: string;
+}
+
+/**
+ * Busca las credenciales de login por email (case-insensitive, `lower(email)`).
+ * No lanza ante email vacío/mal formado: devuelve `null` para no filtrar, por
+ * tiempos ni por error, si una cuenta existe (anti-enumeración).
+ */
+export async function buscarCredencialesPorEmail(sql: Sql, email: string): Promise<Credenciales | null> {
+  const limpio = email.trim();
+  if (limpio.length === 0) return null;
+  const filas = await sql<Credenciales[]>`
+    select id, rol, password_hash from "User" where lower(email) = lower(${limpio})
+  `;
+  return filas[0] ?? null;
+}
+
 function esViolacionUnicidad(err: unknown): boolean {
   return typeof err === 'object' && err !== null && (err as { code?: string }).code === UNIQUE_VIOLATION;
 }
