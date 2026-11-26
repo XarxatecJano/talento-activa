@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
 import type { Sql } from 'postgres';
 import { autenticar } from './auth.js';
-import { crearSesion, eliminarSesionPorToken } from '../model/session.js';
-import { construirCookieSesion, leerTokenCookie } from './cookie.js';
+import { crearSesion, eliminarSesionPorToken, resolverSesion } from '../model/session.js';
+import { obtenerUsuarioPublico } from '../model/user.js';
+import { construirCookieSesion, construirCookieBorrado, leerTokenCookie } from './cookie.js';
 
 /**
  * Construye la app Hono con las rutas de la API. Recibe el cliente `sql` por
@@ -36,6 +37,33 @@ export function crearApp(sql: Sql): Hono {
     c.header('Set-Cookie', construirCookieSesion(token, expiresAt));
 
     return c.json({ id: identidad.id, rol: identidad.rol }, 200);
+  });
+
+  // POST /api/auth/logout — borra la sesión y limpia la cookie. Idempotente.
+  app.post('/api/auth/logout', async (c) => {
+    const token = leerTokenCookie(c.req.header('Cookie'));
+    if (token) await eliminarSesionPorToken(sql, token);
+    c.header('Set-Cookie', construirCookieBorrado());
+    return c.body(null, 204);
+  });
+
+  // GET /api/me — usuario actual (proyección pública sin hash). 401 si no hay
+  // sesión válida. Repone la cookie si hubo renovación deslizante.
+  app.get('/api/me', async (c) => {
+    const token = leerTokenCookie(c.req.header('Cookie'));
+    if (!token) return c.json({ error: 'No autenticado' }, 401);
+
+    const resuelta = await resolverSesion(sql, token);
+    if (!resuelta) return c.json({ error: 'No autenticado' }, 401);
+
+    if (resuelta.renovada) {
+      c.header('Set-Cookie', construirCookieSesion(token, resuelta.expiresAt));
+    }
+
+    const usuario = await obtenerUsuarioPublico(sql, resuelta.actor.id);
+    if (!usuario) return c.json({ error: 'No autenticado' }, 401);
+
+    return c.json(usuario, 200);
   });
 
   return app;

@@ -37,6 +37,14 @@ export function normalizarEmail(email: string): string {
   return limpio;
 }
 
+/** Obtiene la proyección pública (sin hash) de un usuario por id. */
+export async function obtenerUsuarioPublico(sql: Sql, id: string): Promise<UsuarioPublico | null> {
+  const filas = await sql<UsuarioPublico[]>`
+    select id, email, rol, email_verified, created_at from "User" where id = ${id}
+  `;
+  return filas[0] ?? null;
+}
+
 /** Credenciales internas para login: incluye el hash (nunca sale al exterior). */
 export interface Credenciales {
   id: string;

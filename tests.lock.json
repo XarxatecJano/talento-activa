@@ -28,6 +28,10 @@
     "tests/controller/login.test.ts": {
       "sha256": "05291f207bd24aa9e3477de0feaf9312f954008e0148340b357d75164af874b1",
       "lockedAt": "2026-11-26T10:05:28.215Z"
+    },
+    "tests/controller/logout-me.test.ts": {
+      "sha256": "08f9c711bcdcfbcc3db3c2a9d01ec76b33a0cd1bca412b7e23c1ddd825e18601",
+      "lockedAt": "2026-11-26T10:07:06.780Z"
     }
   }
 }
