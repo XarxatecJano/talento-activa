@@ -104,6 +104,14 @@
     "tests/controller/proyectos-escaparate.test.ts": {
       "sha256": "0cc545847b136d4c7d5579891f5f7c5b66862ce16b4fa4161573746bdcd0b3b8",
       "lockedAt": "2026-11-26T15:10:33.661Z"
+    },
+    "tests/model/alumnos-escaparate.test.ts": {
+      "sha256": "738311bec54c226b01c0232a31c9955cb30a8e3675dd77d1f663ff2a6baa36fc",
+      "lockedAt": "2026-11-26T16:11:31.609Z"
+    },
+    "tests/controller/alumnos-escaparate.test.ts": {
+      "sha256": "b55ff8062c7686ffae48e55e6bceb1a32b74159484bba843298017b305d0c6fe",
+      "lockedAt": "2026-11-26T16:11:31.609Z"
     }
   }
 }

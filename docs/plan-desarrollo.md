@@ -181,9 +181,22 @@ En cada conexión, de forma autónoma:
   Tests en `tests/model/proyectos-escaparate.test.ts` (puros, verifican el
   filtrado) y `tests/controller/proyectos-escaparate.test.ts` (permisos +
   enforcement, requieren BD).
-- [ ] **T26 · Búsqueda y filtrado estructurado:** `GET /api/escaparate/alumnos` con
+- [x] **T26 · Búsqueda y filtrado estructurado:** `GET /api/escaparate/alumnos` con
   filtros combinables (`skill`, `edicion`, `modalidad`, `disponibilidad`,
-  `estado_laboral`), solo sobre visibles. Tests de combinaciones.
+  `estado_laboral`), solo sobre visibles. Tests de combinaciones. **Hecho:**
+  `FiltrosAlumno`, `filtrarAlumnosPublicos` (pura, filtrado por campo con AND) y
+  `listarAlumnosEscaparate` (enforcement activo+consentido + `skill` vía `exists`
+  en SQL) en `src/model/escaparate.ts`; endpoint `GET /api/escaparate/alumnos`
+  tras `requiereAuth`+`requiereRol('SOCIO')`+`requiereEmailVerificado`, con
+  `parsearFiltrosAlumno` (valores no válidos → 400). **Privacidad:** un filtro
+  sobre un campo privable (`modalidad`/`disponibilidad`/`estado_laboral`) solo
+  casa si el valor coincide **y** el campo es visible (`privacy[campo] !== false`),
+  para no revelar por inferencia un valor oculto; `edicion` es identidad (siempre
+  visible) y `skill` es relación N:M (sin privacidad propia). Reutiliza
+  `proyectarAlumnoPublico` (T23). Tests en `tests/model/alumnos-escaparate.test.ts`
+  (puros: combinaciones + no-fuga por campo privado) y
+  `tests/controller/alumnos-escaparate.test.ts` (permisos + validación + filtrado
+  combinado, requieren BD).
 - [ ] **T27 · Ficha completa para empresa + contacto:** `GET /api/escaparate/alumnos/:id`
   con la ficha pública (privacy aplicada) **incluyendo el email de contacto** cuando
   el alumno consintió y no lo marcó privado (contacto por revelación). Tests.

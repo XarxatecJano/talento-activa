@@ -1,6 +1,6 @@
 import type { Sql } from 'postgres';
-import { proyectarAlumnoPublico } from './student.js';
-import type { AlumnoPublico, FilaPublica } from './student.js';
+import { proyectarAlumnoPublico, campoVisible } from './student.js';
+import type { AlumnoPublico, FilaPublica, Modalidad, EstadoLaboral } from './student.js';
 import { listarEdiciones, obtenerEdicion } from './edition.js';
 import type { Edition } from './edition.js';
 
@@ -79,6 +79,83 @@ export async function obtenerEdicionEscaparate(
     order by nombre
   `;
   return agruparEscaparate([ed], filas)[0]!;
+}
+
+/**
+ * Filtros estructurados de la búsqueda de alumnos del escaparate (T26). Todos
+ * combinables (AND) y opcionales. `skill` es el id de un item del catálogo de
+ * skills (relación N:M, se aplica en SQL); `edicion` es el id de la edición; el
+ * resto son campos de la ficha.
+ */
+export interface FiltrosAlumno {
+  skill?: string;
+  edicion?: string;
+  modalidad?: Modalidad;
+  disponibilidad?: boolean;
+  estado_laboral?: EstadoLaboral;
+}
+
+/**
+ * Aplica los filtros por campo sobre filas públicas ya restringidas a
+ * consultables (activos + consentidos). Función pura y testable sin BD.
+ *
+ * **Privacidad:** un filtro sobre un campo privable (`modalidad`,
+ * `disponibilidad_traslado`, `estado_laboral`) solo casa si, además de coincidir
+ * el valor, el campo es **visible** para ese alumno (`privacy[campo] !== false`).
+ * Así un match positivo nunca revela un valor que el alumno marcó privado. La
+ * `edicion` (identidad) no está sujeta a privacidad.
+ *
+ * El filtro por `skill` es una relación N:M y se resuelve en SQL (no aquí).
+ */
+export function filtrarAlumnosPublicos(filas: FilaPublica[], filtros: FiltrosAlumno): FilaPublica[] {
+  return filas.filter((f) => {
+    if (filtros.edicion !== undefined && f.edition_id !== filtros.edicion) return false;
+    if (
+      filtros.modalidad !== undefined &&
+      !(f.modalidad === filtros.modalidad && campoVisible(f.privacy, 'modalidad'))
+    ) {
+      return false;
+    }
+    if (
+      filtros.disponibilidad !== undefined &&
+      !(f.disponibilidad_traslado === filtros.disponibilidad && campoVisible(f.privacy, 'disponibilidad_traslado'))
+    ) {
+      return false;
+    }
+    if (
+      filtros.estado_laboral !== undefined &&
+      !(f.estado_laboral === filtros.estado_laboral && campoVisible(f.privacy, 'estado_laboral'))
+    ) {
+      return false;
+    }
+    return true;
+  });
+}
+
+/**
+ * Búsqueda y filtrado estructurado de alumnos del escaparate (T26). Solo sobre
+ * **visibles** (activos + consentidos); el filtro por `skill` se aplica en SQL
+ * (exists sobre `Skill_student_rel`) y el resto con `filtrarAlumnosPublicos`
+ * (privacidad por campo incluida). Devuelve cards públicas (`proyectarAlumnoPublico`).
+ */
+export async function listarAlumnosEscaparate(
+  sql: Sql,
+  filtros: FiltrosAlumno = {},
+): Promise<AlumnoPublico[]> {
+  const filas = await sql<FilaPublica[]>`
+    select ${COLS_PUBLICAS(sql)} from "Student" s
+    where s.estado = 'activo' and s.consent_at is not null
+    ${
+      filtros.skill !== undefined
+        ? sql`and exists (
+            select 1 from "Skill_student_rel" r
+            where r.student_id = s.id and r.skill_id = ${filtros.skill}
+          )`
+        : sql``
+    }
+    order by s.nombre
+  `;
+  return filtrarAlumnosPublicos(filas, filtros).map(proyectarAlumnoPublico);
 }
 
 /**

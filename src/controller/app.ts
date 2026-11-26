@@ -18,7 +18,13 @@ import {
 } from '../model/student.js';
 import type { CambiosFicha, EstadoStudent } from '../model/student.js';
 import { crearEmpresa, listarEmpresas, obtenerEmpresa, marcarSocia } from '../model/company.js';
-import { listarEscaparate, obtenerEdicionEscaparate, listarProyectosEscaparate } from '../model/escaparate.js';
+import {
+  listarEscaparate,
+  obtenerEdicionEscaparate,
+  listarProyectosEscaparate,
+  listarAlumnosEscaparate,
+} from '../model/escaparate.js';
+import type { FiltrosAlumno } from '../model/escaparate.js';
 import {
   crearProyecto,
   listarProyectosPorUserId,
@@ -78,6 +84,37 @@ function parsearCambiosFicha(body: unknown): CambiosFicha | null {
   }
 
   return Object.keys(cambios).length > 0 ? cambios : null;
+}
+
+/**
+ * Valida los parámetros de búsqueda del escaparate de alumnos (T26) y devuelve
+ * los filtros admitidos, o `null` si algún parámetro presente tiene un valor no
+ * válido. Todos los filtros son opcionales y combinables; sin parámetros devuelve
+ * `{}` (listar todos los visibles).
+ */
+function parsearFiltrosAlumno(q: Record<string, string>): FiltrosAlumno | null {
+  const filtros: FiltrosAlumno = {};
+
+  const noVacio = (v: string | undefined): v is string => typeof v === 'string' && v.trim() !== '';
+  if (noVacio(q.skill)) filtros.skill = q.skill;
+  else if ('skill' in q) return null;
+  if (noVacio(q.edicion)) filtros.edicion = q.edicion;
+  else if ('edicion' in q) return null;
+
+  if ('modalidad' in q) {
+    if (!['remoto', 'presencial', 'hibrido'].includes(q.modalidad)) return null;
+    filtros.modalidad = q.modalidad as FiltrosAlumno['modalidad'];
+  }
+  if ('estado_laboral' in q) {
+    if (!['buscando', 'trabajando'].includes(q.estado_laboral)) return null;
+    filtros.estado_laboral = q.estado_laboral as FiltrosAlumno['estado_laboral'];
+  }
+  if ('disponibilidad' in q) {
+    if (q.disponibilidad !== 'true' && q.disponibilidad !== 'false') return null;
+    filtros.disponibilidad = q.disponibilidad === 'true';
+  }
+
+  return filtros;
 }
 
 /** Valida el body de edición de proyecto; `null` si inválido o sin campos. */
@@ -511,6 +548,21 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     requiereRol('SOCIO'),
     requiereEmailVerificado(sql),
     async (c) => c.json(await listarProyectosEscaparate(sql)),
+  );
+
+  // Búsqueda y filtrado estructurado de alumnos (T26): filtros combinables
+  // (skill, edicion, modalidad, disponibilidad, estado_laboral), solo sobre
+  // visibles (activos + consentidos) y con la privacidad por campo aplicada.
+  app.get(
+    '/api/escaparate/alumnos',
+    requiereAuth(sql),
+    requiereRol('SOCIO'),
+    requiereEmailVerificado(sql),
+    async (c) => {
+      const filtros = parsearFiltrosAlumno(c.req.query());
+      if (!filtros) return c.json({ error: 'Datos no válidos' }, 400);
+      return c.json(await listarAlumnosEscaparate(sql, filtros));
+    },
   );
 
   // --- Empresas (alta por invitación; marcado de socia) -----------------------
