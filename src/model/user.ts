@@ -45,6 +45,14 @@ export function normalizarEmail(email: string): string {
   return limpio;
 }
 
+/** ¿El usuario tiene el email verificado? */
+export async function estaEmailVerificado(sql: Sql, userId: string): Promise<boolean> {
+  const filas = await sql<{ email_verified: boolean }[]>`
+    select email_verified from "User" where id = ${userId}
+  `;
+  return filas[0]?.email_verified === true;
+}
+
 /** Obtiene la proyección pública (sin hash) de un usuario por id. */
 export async function obtenerUsuarioPublico(sql: Sql, id: string): Promise<UsuarioPublico | null> {
   const filas = await sql<UsuarioPublico[]>`

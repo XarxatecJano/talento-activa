@@ -3,6 +3,7 @@ import type { Sql } from 'postgres';
 import { resolverSesion } from '../model/session.js';
 import type { Actor } from '../model/session.js';
 import type { Rol } from '../model/user.js';
+import { estaEmailVerificado } from '../model/user.js';
 import { construirCookieSesion, leerTokenCookie } from './cookie.js';
 
 /** Variables de contexto compartidas por la app autenticada. */
@@ -38,6 +39,21 @@ export function requiereRol(...roles: Rol[]): MiddlewareHandler<AppEnv> {
     const actor = c.get('actor');
     if (!actor || !roles.includes(actor.rol)) {
       return c.json({ error: 'No autorizado' }, 403);
+    }
+    await next();
+  };
+}
+
+/**
+ * Middleware que exige que el usuario tenga el email verificado (403 si no).
+ * Debe ir DESPUÉS de `requiereAuth`. Se aplica a las rutas de acceso real (no a
+ * login/logout/me), para bloquear el acceso a recursos hasta verificar.
+ */
+export function requiereEmailVerificado(sql: Sql): MiddlewareHandler<AppEnv> {
+  return async (c, next) => {
+    const actor = c.get('actor');
+    if (!actor || !(await estaEmailVerificado(sql, actor.id))) {
+      return c.json({ error: 'Email no verificado' }, 403);
     }
     await next();
   };

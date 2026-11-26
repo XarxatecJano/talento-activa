@@ -3,15 +3,23 @@ import type { Sql } from 'postgres';
 import { autenticar } from './auth.js';
 import { crearSesion, eliminarSesionPorToken } from '../model/session.js';
 import { obtenerUsuarioPublico, crearUsuario, esRol } from '../model/user.js';
+import { crearTokenVerificacion, verificarEmail } from '../model/email_verification.js';
 import { DatosInvalidosError, EmailYaRegistradoError } from '../model/errors.js';
 import { construirCookieSesion, construirCookieBorrado, leerTokenCookie } from './cookie.js';
 import { requiereAuth, requiereRol, type AppEnv } from './middleware.js';
+import { enviadorNoop, type EnviadorEmail } from './email.js';
+
+export interface OpcionesApp {
+  /** Enviador de email transaccional. Por defecto, un no-op. */
+  enviador?: EnviadorEmail;
+}
 
 /**
  * Construye la app Hono con las rutas de la API. Recibe el cliente `sql` por
  * inyección para poder testear con una BD real sin depender de un singleton.
  */
-export function crearApp(sql: Sql): Hono<AppEnv> {
+export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
+  const enviador = opciones.enviador ?? enviadorNoop;
   const app = new Hono<AppEnv>();
 
   // POST /api/auth/login — crea una sesión nueva (invalidando la previa de la
@@ -59,12 +67,32 @@ export function crearApp(sql: Sql): Hono<AppEnv> {
         { email: body.email, password: body.password, rol: body.rol },
         actor.id,
       );
+      // Envía la verificación (best-effort: la cuenta ya existe aunque el email
+      // falle; en el futuro habrá reenvío). La cuenta nace sin verificar.
+      try {
+        const { token } = await crearTokenVerificacion(sql, usuario.id);
+        await enviador.enviarVerificacion(usuario.email, token);
+      } catch {
+        /* el fallo de envío no invalida el alta */
+      }
       return c.json(usuario, 201);
     } catch (err) {
       if (err instanceof EmailYaRegistradoError) return c.json({ error: err.message }, 409);
       if (err instanceof DatosInvalidosError) return c.json({ error: err.message }, 400);
       throw err;
     }
+  });
+
+  // POST /api/auth/verify — consume el token de verificación de email. Público
+  // (el usuario llega desde el enlace del email). De un solo uso.
+  app.post('/api/auth/verify', async (c) => {
+    const body = (await c.req.json().catch(() => null)) as { token?: unknown } | null;
+    if (!body || typeof body.token !== 'string') {
+      return c.json({ error: 'Datos no válidos' }, 400);
+    }
+    const ok = await verificarEmail(sql, body.token);
+    if (!ok) return c.json({ error: 'Token no válido o caducado' }, 400);
+    return c.json({ ok: true }, 200);
   });
 
   // POST /api/auth/logout — borra la sesión y limpia la cookie. Idempotente.

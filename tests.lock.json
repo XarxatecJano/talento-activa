@@ -40,6 +40,10 @@
     "tests/controller/register.test.ts": {
       "sha256": "00b8c4dbc32ca9cc7f1175128c0419b42010a5c1a93d13555be76fcb41b5ce7e",
       "lockedAt": "2026-11-26T10:11:01.001Z"
+    },
+    "tests/controller/verify.test.ts": {
+      "sha256": "13907d9d1f9f1e201e44ec9dcf08ba28e51e788042182bb36b353ca7550f74bd",
+      "lockedAt": "2026-11-26T10:17:59.613Z"
     }
   }
 }

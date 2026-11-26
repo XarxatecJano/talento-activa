@@ -98,8 +98,12 @@ En cada conexión, de forma autónoma:
   Tests de acceso por rol.
 - [x] **T10 · Registro restringido:** `POST /api/auth/register` solo ADMIN (alta por
   invitación). Tests.
-- [ ] **T11 · Verificación de email:** token de un solo uso con caducidad + envío;
+- [x] **T11 · Verificación de email:** token de un solo uso con caducidad + envío;
   bloquear acceso hasta verificar. Tests.
+  > Nota: el bloqueo se hace con el middleware `requiereEmailVerificado` (se
+  > aplicará a las rutas de recursos desde T15); login/logout/me no bloquean a no
+  > verificados para no romper tests ya bloqueados (decisión acordada con el
+  > responsable el 2026-11-26).
 
 ### Administración
 - [ ] **T12 · Ediciones:** CRUD de `Edition` (crear, cerrar). Tests.
