@@ -149,6 +149,87 @@ export async function actualizarFicha(
   return (resultado as FichaStudent | null) ?? null;
 }
 
+async function cambiarEstadoInterno(
+  sql: Sql,
+  columna: 'id' | 'user_id',
+  valor: string,
+  estado: EstadoStudent,
+  idActor: string | null,
+): Promise<Student | null> {
+  const resultado = await sql.begin(async (tx) => {
+    const previas = await tx<{ id: string; estado: EstadoStudent }[]>`
+      select id, estado from "Student" where ${tx(columna)} = ${valor} for update
+    `;
+    const previa = previas[0];
+    if (!previa) return null;
+
+    const filas = await tx<Student[]>`
+      update "Student" set estado = ${estado} where id = ${previa.id}
+      returning id, user_id, edition_id, nombre, estado
+    `;
+    await registrarAuditoria(tx, {
+      idUsuario: idActor,
+      tabla: 'Student',
+      idRegistro: previa.id,
+      operacion: 'UPDATE',
+      datosAnteriores: { estado: previa.estado },
+      datosNuevos: { estado },
+    });
+    return filas[0]!;
+  });
+  return (resultado as Student | null) ?? null;
+}
+
+/** Cambia el estado de un alumno por su user_id (uso: el propio alumno). */
+export function cambiarEstadoPorUserId(
+  sql: Sql,
+  userId: string,
+  estado: EstadoStudent,
+  idActor: string | null,
+): Promise<Student | null> {
+  return cambiarEstadoInterno(sql, 'user_id', userId, estado, idActor);
+}
+
+/** Cambia el estado de un alumno por su id de Student (uso: admin). */
+export function cambiarEstadoAlumno(
+  sql: Sql,
+  studentId: string,
+  estado: EstadoStudent,
+  idActor: string | null,
+): Promise<Student | null> {
+  return cambiarEstadoInterno(sql, 'id', studentId, estado, idActor);
+}
+
+/** Proyección pública de un alumno para empresas (sin email ni privacy). */
+export interface AlumnoPublico {
+  id: string;
+  edition_id: string;
+  nombre: string;
+  foto_url: string | null;
+  bio: string | null;
+  ubicacion: string | null;
+  disponibilidad_traslado: boolean;
+  modalidad: Modalidad | null;
+  estado_laboral: EstadoLaboral | null;
+  cv_url: string | null;
+  linkedin: string | null;
+  github: string | null;
+}
+
+/**
+ * Obtiene la proyección pública de un alumno para una empresa. Enforcement: solo
+ * devuelve alumnos **activos**; un alumno inactivo no es consultable (→ `null`).
+ * El filtrado fino por campo (`privacy`) llegará con el escaparate (fase 2).
+ */
+export async function obtenerAlumnoPublico(sql: Sql, studentId: string): Promise<AlumnoPublico | null> {
+  const filas = await sql<AlumnoPublico[]>`
+    select id, edition_id, nombre, foto_url, bio, ubicacion, disponibilidad_traslado,
+           modalidad, estado_laboral, cv_url, linkedin, github
+    from "Student" where id = ${studentId} and estado = 'activo'
+  `;
+  return filas[0] ?? null;
+}
+
 function codigo(err: unknown): string | undefined {
   return typeof err === 'object' && err !== null ? (err as { code?: string }).code : undefined;
 }

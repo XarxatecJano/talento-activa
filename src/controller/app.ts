@@ -5,8 +5,15 @@ import { crearSesion, eliminarSesionPorToken } from '../model/session.js';
 import { obtenerUsuarioPublico, crearUsuario, esRol } from '../model/user.js';
 import { crearTokenVerificacion, verificarEmail } from '../model/email_verification.js';
 import { crearEdicion, listarEdiciones, obtenerEdicion, cerrarEdicion } from '../model/edition.js';
-import { crearAlumno, obtenerFichaPorUserId, actualizarFicha } from '../model/student.js';
-import type { CambiosFicha } from '../model/student.js';
+import {
+  crearAlumno,
+  obtenerFichaPorUserId,
+  actualizarFicha,
+  cambiarEstadoPorUserId,
+  cambiarEstadoAlumno,
+  obtenerAlumnoPublico,
+} from '../model/student.js';
+import type { CambiosFicha, EstadoStudent } from '../model/student.js';
 import { crearEmpresa, listarEmpresas, obtenerEmpresa, marcarSocia } from '../model/company.js';
 import { DatosInvalidosError, EmailYaRegistradoError } from '../model/errors.js';
 import { construirCookieSesion, construirCookieBorrado, leerTokenCookie } from './cookie.js';
@@ -265,6 +272,49 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
       const ficha = await actualizarFicha(sql, actor.id, cambios, actor.id);
       if (!ficha) return c.json({ error: 'Ficha no encontrada' }, 404);
       return c.json(ficha);
+    },
+  );
+
+  // Alumno cambia su propio estado.
+  app.patch(
+    '/api/alumnos/me/estado',
+    requiereAuth(sql),
+    requiereRol('ALUMNO'),
+    requiereEmailVerificado(sql),
+    async (c) => {
+      const actor = c.get('actor');
+      const body = (await c.req.json().catch(() => null)) as { estado?: unknown } | null;
+      if (!body || (body.estado !== 'activo' && body.estado !== 'inactivo')) {
+        return c.json({ error: 'Datos no válidos' }, 400);
+      }
+      const student = await cambiarEstadoPorUserId(sql, actor.id, body.estado as EstadoStudent, actor.id);
+      if (!student) return c.json({ error: 'Ficha no encontrada' }, 404);
+      return c.json(student);
+    },
+  );
+
+  // Admin cambia el estado de cualquier alumno.
+  app.patch('/api/alumnos/:id/estado', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+    const actor = c.get('actor');
+    const body = (await c.req.json().catch(() => null)) as { estado?: unknown } | null;
+    if (!body || (body.estado !== 'activo' && body.estado !== 'inactivo')) {
+      return c.json({ error: 'Datos no válidos' }, 400);
+    }
+    const student = await cambiarEstadoAlumno(sql, c.req.param('id'), body.estado as EstadoStudent, actor.id);
+    if (!student) return c.json({ error: 'No encontrado' }, 404);
+    return c.json(student);
+  });
+
+  // Empresa consulta un alumno (solo activos; enforcement de visibilidad).
+  app.get(
+    '/api/alumnos/:id',
+    requiereAuth(sql),
+    requiereRol('SOCIO'),
+    requiereEmailVerificado(sql),
+    async (c) => {
+      const alumno = await obtenerAlumnoPublico(sql, c.req.param('id'));
+      if (!alumno) return c.json({ error: 'No encontrado' }, 404);
+      return c.json(alumno);
     },
   );
 
