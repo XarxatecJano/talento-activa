@@ -280,8 +280,62 @@ export function borrarAlumnoPorId(sql: Sql, studentId: string, idActor: string |
   return borrarAlumnoInterno(sql, 'id', studentId, idActor);
 }
 
-/** Proyección pública de un alumno para empresas (sin email ni privacy). */
+/**
+ * Forma de `Student.privacy` (jsonb): visibilidad **por campo**. Un campo es
+ * visible por defecto; solo se oculta de la proyección pública si su entrada es
+ * exactamente `false` (ver `campoVisible`). Se admite cualquier jsonb por
+ * compatibilidad; los valores que no sean `false` no ocultan.
+ */
+export type Privacy = Record<string, unknown>;
+
+/**
+ * Campos de la proyección pública sujetos a privacidad por campo. La identidad
+ * (`id`, `edition_id`, `nombre`) siempre es visible: una card del escaparate
+ * necesita al menos identificar al alumno.
+ */
+export const CAMPOS_PRIVABLES = [
+  'foto_url',
+  'bio',
+  'ubicacion',
+  'disponibilidad_traslado',
+  'modalidad',
+  'estado_laboral',
+  'cv_url',
+  'linkedin',
+  'github',
+] as const;
+export type CampoPrivable = (typeof CAMPOS_PRIVABLES)[number];
+
+/**
+ * Regla de visibilidad por campo: un campo es visible salvo que su entrada en
+ * `privacy` sea exactamente el booleano `false`. Cualquier otro valor (ausente,
+ * `true`, string heredado…) se considera visible.
+ */
+export function campoVisible(privacy: Privacy | null | undefined, campo: string): boolean {
+  return !privacy || privacy[campo] !== false;
+}
+
+/** Proyección pública de un alumno para empresas (sin email ni privacy). Los
+ * campos sujetos a privacidad son opcionales: se omiten si están marcados como
+ * privados. */
 export interface AlumnoPublico {
+  id: string;
+  edition_id: string;
+  nombre: string;
+  foto_url?: string | null;
+  bio?: string | null;
+  ubicacion?: string | null;
+  disponibilidad_traslado?: boolean;
+  modalidad?: Modalidad | null;
+  estado_laboral?: EstadoLaboral | null;
+  cv_url?: string | null;
+  linkedin?: string | null;
+  github?: string | null;
+}
+
+/** Fila completa relevante para la proyección pública (identidad + campos
+ * privables + `privacy`). */
+export interface FilaPublica {
   id: string;
   edition_id: string;
   nombre: string;
@@ -294,21 +348,44 @@ export interface AlumnoPublico {
   cv_url: string | null;
   linkedin: string | null;
   github: string | null;
+  privacy: Privacy;
+}
+
+/**
+ * Construye la proyección pública de un alumno aplicando la privacidad por campo:
+ * la identidad siempre va; cada campo privable se incluye solo si es visible
+ * (`privacy[campo] !== false`). Función pura y reutilizable por los listados del
+ * escaparate (T24/T25/T27).
+ */
+export function proyectarAlumnoPublico(fila: FilaPublica): AlumnoPublico {
+  const pub: AlumnoPublico = {
+    id: fila.id,
+    edition_id: fila.edition_id,
+    nombre: fila.nombre,
+  };
+  const destino = pub as unknown as Record<string, unknown>;
+  for (const campo of CAMPOS_PRIVABLES) {
+    if (campoVisible(fila.privacy, campo)) {
+      destino[campo] = (fila as unknown as Record<string, unknown>)[campo];
+    }
+  }
+  return pub;
 }
 
 /**
  * Obtiene la proyección pública de un alumno para una empresa. Enforcement: solo
  * devuelve alumnos **activos** y **con consentimiento** (`consent_at` no nulo);
- * un alumno inactivo o sin consentir no es consultable (→ `null`). El filtrado
- * fino por campo (`privacy`) llegará con el escaparate (fase 2).
+ * un alumno inactivo o sin consentir no es consultable (→ `null`). Aplica además
+ * el **filtrado por campo** según `Student.privacy` (ver `proyectarAlumnoPublico`).
  */
 export async function obtenerAlumnoPublico(sql: Sql, studentId: string): Promise<AlumnoPublico | null> {
-  const filas = await sql<AlumnoPublico[]>`
+  const filas = await sql<FilaPublica[]>`
     select id, edition_id, nombre, foto_url, bio, ubicacion, disponibilidad_traslado,
-           modalidad, estado_laboral, cv_url, linkedin, github
+           modalidad, estado_laboral, cv_url, linkedin, github, privacy
     from "Student" where id = ${studentId} and estado = 'activo' and consent_at is not null
   `;
-  return filas[0] ?? null;
+  const fila = filas[0];
+  return fila ? proyectarAlumnoPublico(fila) : null;
 }
 
 function codigo(err: unknown): string | undefined {

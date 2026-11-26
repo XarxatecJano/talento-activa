@@ -84,6 +84,10 @@
     "tests/controller/health.test.ts": {
       "sha256": "3c8d99075d84e8f814d2d6e5f16609b5383fe25f6feeb96c2db549b7c1de4e7d",
       "lockedAt": "2026-11-26T12:00:24.650Z"
+    },
+    "tests/model/privacy.test.ts": {
+      "sha256": "931347b3ec4cdd2d0faebc818e7d6ccc3bed3c1d64836fac0161bcf4339d59e8",
+      "lockedAt": "2026-11-26T13:29:50.021Z"
     }
   }
 }

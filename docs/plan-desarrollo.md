@@ -154,10 +154,13 @@ En cada conexión, de forma autónoma:
   la **verificación** envíe de verdad en producción. En test/dev se usa el doble.
 
 ### Escaparate (lectura; solo SOCIO)
-- [ ] **T23 · Privacidad por campo:** define la forma de `Student.privacy`
+- [x] **T23 · Privacidad por campo:** define la forma de `Student.privacy`
   (propuesta: `{ "<campo>": boolean }`, visible por defecto salvo `false`) y aplica
   el filtrado en la proyección pública. Resuelve el MEDIO 2 aplazado. Test de
-  enforcement (campo privado no aparece).
+  enforcement (campo privado no aparece). **Hecho:** `campoVisible`,
+  `proyectarAlumnoPublico` (pura, reutilizable) y `CAMPOS_PRIVABLES` en
+  `student.ts`; `obtenerAlumnoPublico` aplica el filtrado. La identidad
+  (`id`/`edition_id`/`nombre`) nunca se oculta. Tests en `tests/model/privacy.test.ts`.
 - [ ] **T24 · Ediciones → cards de alumnos:** `GET /api/escaparate/ediciones` y
   `.../ediciones/:id` devuelven los alumnos **activos + consentidos** de la edición,
   proyección pública con `privacy` aplicada. Oculta inactivos/no-consentidos/
@@ -207,9 +210,10 @@ Documentadas a raíz de la auditoría `docs/revisiones/2026-11-26.md`:
 
 - **Consentimiento al publicar (MEDIO 1):** RESUELTO en T20 (el responsable dio OK
   para actualizar `estado.test.ts`).
-- **Filtrado `privacy` por campo (MEDIO 2):** APLAZADO a Fase 2, junto con el
-  escaparate/navegación de empresas (su punto de uso real). `obtenerAlumnoPublico`
-  queda como proyección pública mínima por ahora.
+- **Filtrado `privacy` por campo (MEDIO 2):** ~~APLAZADO a Fase 2~~ **RESUELTO en
+  T23** (2026-11-26). Regla: un campo se oculta de la proyección pública solo si
+  `privacy[campo] === false`; la identidad (`id`/`edition_id`/`nombre`) nunca se
+  oculta. `obtenerAlumnoPublico` aplica el filtrado vía `proyectarAlumnoPublico`.
 - **Verificación de email en rutas de admin (MENOR 4):** ACEPTADO como está. El
   admin inicial nace verificado (seed); endurecerlo requeriría tocar tests
   bloqueados y se deja para más adelante si hiciera falta.
