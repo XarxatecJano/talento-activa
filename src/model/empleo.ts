@@ -74,6 +74,9 @@ export async function asignarEmpresaActual(
     `;
     const previa = previas[0];
     if (!previa) return 'sin-alumno';
+    // Reasignar la misma empresa es un no-op idempotente: no hay cambio, así que
+    // no se hace UPDATE ni se audita (mismo patrón que `quitarEmpresaActual`).
+    if (previa.current_company_id === companyId) return 'ok';
 
     const empresas = await tx<{ id: string }[]>`
       select id from "Company" where id = ${companyId} and es_socia = true

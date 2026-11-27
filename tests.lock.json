@@ -144,6 +144,10 @@
     "tests/controller/uuid-no-valido.test.ts": {
       "sha256": "6eaacd1570559f0d8468f523a624cabc1da34ed4d052e6552a133c56587385e1",
       "lockedAt": "2026-11-27T05:12:35.470Z"
+    },
+    "tests/model/empleo-noop.test.ts": {
+      "sha256": "4dbef80b74eef27a7c99818f5d8ca7e8270e236f6f738612a5b2e37c732e6af7",
+      "lockedAt": "2026-11-27T07:09:01.655Z"
     }
   }
 }
