@@ -136,6 +136,14 @@
     "tests/controller/empleo.test.ts": {
       "sha256": "49c68c49afe3818aef8748b31daf0e875a767480aa3ff2b6f7fc51c9a86ace94",
       "lockedAt": "2026-11-26T19:10:27.342Z"
+    },
+    "tests/controller/validacion.test.ts": {
+      "sha256": "3f56d474cf48a72143e5b0b957cdbd45437c2944cac7a0ada5346e8f2647be40",
+      "lockedAt": "2026-11-27T05:12:35.470Z"
+    },
+    "tests/controller/uuid-no-valido.test.ts": {
+      "sha256": "6eaacd1570559f0d8468f523a624cabc1da34ed4d052e6552a133c56587385e1",
+      "lockedAt": "2026-11-27T05:12:35.470Z"
     }
   }
 }

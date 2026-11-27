@@ -57,6 +57,7 @@ import {
 import { DatosInvalidosError, EmailYaRegistradoError, RecursoDuplicadoError } from '../model/errors.js';
 import { construirCookieSesion, construirCookieBorrado, leerTokenCookie } from './cookie.js';
 import { requiereAuth, requiereRol, requiereEmailVerificado, type AppEnv } from './middleware.js';
+import { esUuid, uuidParam } from './validacion.js';
 
 /**
  * Valida el body de edición de ficha y devuelve los cambios admitidos, o `null`
@@ -102,16 +103,22 @@ function parsearCambiosFicha(body: unknown): CambiosFicha | null {
  * Valida los parámetros de búsqueda del escaparate de alumnos (T26) y devuelve
  * los filtros admitidos, o `null` si algún parámetro presente tiene un valor no
  * válido. Todos los filtros son opcionales y combinables; sin parámetros devuelve
- * `{}` (listar todos los visibles).
+ * `{}` (listar todos los visibles). `skill` y `edicion` deben ser UUID (comparan
+ * contra columnas `uuid`): un valor no-UUID se rechaza como dato no válido en
+ * vez de provocar un 500 al llegar a la consulta (revisión 2026-11-26, MEDIO 1).
  */
-function parsearFiltrosAlumno(q: Record<string, string>): FiltrosAlumno | null {
+export function parsearFiltrosAlumno(q: Record<string, string>): FiltrosAlumno | null {
   const filtros: FiltrosAlumno = {};
 
   const noVacio = (v: string | undefined): v is string => typeof v === 'string' && v.trim() !== '';
-  if (noVacio(q.skill)) filtros.skill = q.skill;
-  else if ('skill' in q) return null;
-  if (noVacio(q.edicion)) filtros.edicion = q.edicion;
-  else if ('edicion' in q) return null;
+  if (noVacio(q.skill)) {
+    if (!esUuid(q.skill)) return null;
+    filtros.skill = q.skill;
+  } else if ('skill' in q) return null;
+  if (noVacio(q.edicion)) {
+    if (!esUuid(q.edicion)) return null;
+    filtros.edicion = q.edicion;
+  } else if ('edicion' in q) return null;
 
   if ('modalidad' in q) {
     if (!['remoto', 'presencial', 'hibrido'].includes(q.modalidad)) return null;
@@ -290,13 +297,13 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     return c.json(await listarEdiciones(sql));
   });
 
-  app.get('/api/ediciones/:id', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+  app.get('/api/ediciones/:id', requiereAuth(sql), requiereRol('ADMIN'), uuidParam(), async (c) => {
     const ed = await obtenerEdicion(sql, c.req.param('id'));
     if (!ed) return c.json({ error: 'No encontrada' }, 404);
     return c.json(ed);
   });
 
-  app.post('/api/ediciones/:id/cerrar', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+  app.post('/api/ediciones/:id/cerrar', requiereAuth(sql), requiereRol('ADMIN'), uuidParam(), async (c) => {
     const actor = c.get('actor');
     const ed = await cerrarEdicion(sql, c.req.param('id'), actor.id);
     if (!ed) return c.json({ error: 'No encontrada' }, 404);
@@ -403,7 +410,7 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
   );
 
   // Admin cambia el estado de cualquier alumno.
-  app.patch('/api/alumnos/:id/estado', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+  app.patch('/api/alumnos/:id/estado', requiereAuth(sql), requiereRol('ADMIN'), uuidParam(), async (c) => {
     const actor = c.get('actor');
     const body = (await c.req.json().catch(() => null)) as { estado?: unknown } | null;
     if (!body || (body.estado !== 'activo' && body.estado !== 'inactivo')) {
@@ -466,6 +473,7 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     requiereAuth(sql),
     requiereRol('ALUMNO'),
     requiereEmailVerificado(sql),
+    uuidParam(),
     async (c) => {
       const actor = c.get('actor');
       const cambios: CambiosProyecto | null = parsearCambiosProyecto(await c.req.json().catch(() => null));
@@ -486,6 +494,7 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     requiereAuth(sql),
     requiereRol('ALUMNO'),
     requiereEmailVerificado(sql),
+    uuidParam(),
     async (c) => {
       const actor = c.get('actor');
       const borrado = await borrarProyecto(sql, actor.id, c.req.param('id'), actor.id);
@@ -509,7 +518,7 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
   );
 
   // Admin ejerce el borrado de un alumno (derecho al olvido).
-  app.delete('/api/alumnos/:id', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+  app.delete('/api/alumnos/:id', requiereAuth(sql), requiereRol('ADMIN'), uuidParam(), async (c) => {
     const actor = c.get('actor');
     const borrado = await borrarAlumnoPorId(sql, c.req.param('id'), actor.id);
     if (!borrado) return c.json({ error: 'No encontrado' }, 404);
@@ -518,10 +527,12 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
 
   // Admin asigna la empresa socia en la que trabaja un alumno (T29). La empresa
   // debe existir y ser socia (`es_socia`); si no → 400. Alumno inexistente → 404.
-  app.put('/api/alumnos/:id/empresa-actual', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+  app.put('/api/alumnos/:id/empresa-actual', requiereAuth(sql), requiereRol('ADMIN'), uuidParam(), async (c) => {
     const actor = c.get('actor');
     const body = (await c.req.json().catch(() => null)) as { company_id?: unknown } | null;
-    if (!body || typeof body.company_id !== 'string' || body.company_id.trim() === '') {
+    // `company_id` compara contra una columna `uuid`: exigirlo con formato UUID
+    // evita un 22P02/500 (revisión 2026-11-26, MEDIO 1).
+    if (!body || !esUuid(body.company_id)) {
       return c.json({ error: 'Datos no válidos' }, 400);
     }
     const r = await asignarEmpresaActual(sql, c.req.param('id'), body.company_id, actor.id);
@@ -532,7 +543,7 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
 
   // Admin quita la empresa actual de un alumno (T29). Idempotente. 404 si el
   // alumno no existe.
-  app.delete('/api/alumnos/:id/empresa-actual', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+  app.delete('/api/alumnos/:id/empresa-actual', requiereAuth(sql), requiereRol('ADMIN'), uuidParam(), async (c) => {
     const actor = c.get('actor');
     const ok = await quitarEmpresaActual(sql, c.req.param('id'), actor.id);
     if (!ok) return c.json({ error: 'No encontrado' }, 404);
@@ -545,6 +556,7 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     requiereAuth(sql),
     requiereRol('SOCIO'),
     requiereEmailVerificado(sql),
+    uuidParam(),
     async (c) => {
       const alumno = await obtenerAlumnoPublico(sql, c.req.param('id'));
       if (!alumno) return c.json({ error: 'No encontrado' }, 404);
@@ -570,6 +582,7 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     requiereAuth(sql),
     requiereRol('SOCIO'),
     requiereEmailVerificado(sql),
+    uuidParam(),
     async (c) => {
       const ed = await obtenerEdicionEscaparate(sql, c.req.param('id'));
       if (!ed) return c.json({ error: 'No encontrada' }, 404);
@@ -620,6 +633,7 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     requiereAuth(sql),
     requiereRol('SOCIO'),
     requiereEmailVerificado(sql),
+    uuidParam(),
     async (c) => {
       const alumno = await obtenerAlumnoPublicoConContacto(sql, c.req.param('id'));
       if (!alumno) return c.json({ error: 'No encontrado' }, 404);
@@ -649,6 +663,7 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     requiereAuth(sql),
     requiereRol('SOCIO'),
     requiereEmailVerificado(sql),
+    uuidParam(),
     async (c) => {
       const actor = c.get('actor');
       const companyId = await obtenerEmpresaDeUsuario(sql, actor.id);
@@ -664,6 +679,7 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     requiereAuth(sql),
     requiereRol('SOCIO'),
     requiereEmailVerificado(sql),
+    uuidParam(),
     async (c) => {
       const actor = c.get('actor');
       const companyId = await obtenerEmpresaDeUsuario(sql, actor.id);
@@ -718,13 +734,13 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
     return c.json(await listarEmpresas(sql));
   });
 
-  app.get('/api/empresas/:id', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+  app.get('/api/empresas/:id', requiereAuth(sql), requiereRol('ADMIN'), uuidParam(), async (c) => {
     const empresa = await obtenerEmpresa(sql, c.req.param('id'));
     if (!empresa) return c.json({ error: 'No encontrada' }, 404);
     return c.json(empresa);
   });
 
-  app.patch('/api/empresas/:id', requiereAuth(sql), requiereRol('ADMIN'), async (c) => {
+  app.patch('/api/empresas/:id', requiereAuth(sql), requiereRol('ADMIN'), uuidParam(), async (c) => {
     const actor = c.get('actor');
     const body = (await c.req.json().catch(() => null)) as { es_socia?: unknown } | null;
     if (!body || typeof body.es_socia !== 'boolean') {
@@ -769,6 +785,7 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
       requiereAuth(sql),
       requiereRol('ALUMNO'),
       requiereEmailVerificado(sql),
+      uuidParam(),
       async (c) => {
         const actor = c.get('actor');
         const body = (await c.req.json().catch(() => null)) as { nivel?: unknown } | null;
@@ -789,6 +806,7 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
       requiereAuth(sql),
       requiereRol('ALUMNO'),
       requiereEmailVerificado(sql),
+      uuidParam(),
       async (c) => {
         const ok = await desasociarAlumno(sql, cfg, c.get('actor').id, c.req.param('id'), c.get('actor').id);
         if (!ok) return c.json({ error: 'No encontrado' }, 404);
