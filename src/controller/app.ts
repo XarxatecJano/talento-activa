@@ -322,7 +322,7 @@ export function crearApp(sql: Sql, opciones: OpcionesApp = {}): Hono<AppEnv> {
       typeof body.email !== 'string' ||
       typeof body.password !== 'string' ||
       typeof body.nombre !== 'string' ||
-      typeof body.edition_id !== 'string'
+      !esUuid(body.edition_id)
     ) {
       return c.json({ error: 'Datos no válidos' }, 400);
     }

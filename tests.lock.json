@@ -148,6 +148,10 @@
     "tests/model/empleo-noop.test.ts": {
       "sha256": "4dbef80b74eef27a7c99818f5d8ca7e8270e236f6f738612a5b2e37c732e6af7",
       "lockedAt": "2026-11-27T07:09:01.655Z"
+    },
+    "tests/controller/alta-alumno-edition-uuid.test.ts": {
+      "sha256": "5f91343903e6da608dd4cf2f08ff246dae15389876a85e4639c4f9911f5772e2",
+      "lockedAt": "2026-11-28T05:09:56.477Z"
     }
   }
 }
